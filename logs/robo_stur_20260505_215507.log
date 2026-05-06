@@ -1,0 +1,8 @@
+2026-05-05 21:55:07,394 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stur_base/logs/robo_stur_20260505_215507.log
+2026-05-05 21:55:07,395 | INFO | robo_stur | Iniciando processamento do arquivo: /Users/gabrielfornydesouzamuniz/Downloads/2026-04-15_000000000455_d8266ce4caa4.xlsx
+2026-05-05 21:55:07,695 | INFO | robo_stur | Aba/Origem carregada: Transações
+2026-05-05 21:55:07,696 | INFO | robo_stur | Colunas encontradas: ['Transações', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7', 'Unnamed: 8', 'Unnamed: 9', 'Unnamed: 10', 'Unnamed: 11', 'Unnamed: 12', 'Unnamed: 13', 'Unnamed: 14']
+2026-05-05 21:55:07,705 | INFO | robo_stur | Total de transações com código após '*': 208
+2026-05-05 21:55:09,197 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-05-05 21:58:44,327 | INFO | robo_stur | Login enviado com sucesso.
+2026-05-05 21:59:49,604 | INFO | robo_stur | Acessando menu Operacional -> Vendas
