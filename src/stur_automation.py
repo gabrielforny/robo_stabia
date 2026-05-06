@@ -23,7 +23,7 @@ SELECTORS = {
     "menu_vendas": "#waM61",
 
     # Busca em vendas - TROCAR conforme a tela real
-    "campo_busca_vendas": "input[type='search'], input[name*='search'], input[id*='search']",
+    "campo_busca_vendas": "#c0_PH1_UsrPesquisaRapidaLista1_EdtPesquisa",
     "botao_buscar_vendas": "button:has-text('Buscar'), input[value='Buscar']",
 
     # Grid/resultado - TROCAR conforme a tela real
@@ -111,17 +111,16 @@ class SturAutomation:
 
     def buscar_venda(self, codigo_companhia: str) -> ResultadoVenda:
         page = self._page()
+        frame = page.frame_locator("#sturweb")
 
         self.logger.info("Buscando venda pelo código/localizador: %s", codigo_companhia)
 
-        campo_busca = page.locator(SELECTORS["campo_busca_vendas"]).first
+        campo_busca = frame.locator(SELECTORS["campo_busca_vendas"]).first
+        campo_busca.wait_for(state="visible", timeout=15000)
+
         campo_busca.fill("")
         campo_busca.fill(codigo_companhia)
-
-        try:
-            page.locator(SELECTORS["botao_buscar_vendas"]).first.click()
-        except PlaywrightTimeoutError:
-            campo_busca.press("Enter")
+        campo_busca.press("Enter")
 
         page.wait_for_load_state("networkidle")
 

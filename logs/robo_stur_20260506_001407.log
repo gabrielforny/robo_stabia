@@ -1,0 +1,47 @@
+2026-05-06 00:14:07,920 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260506_001407.log
+2026-05-06 00:14:07,921 | INFO | robo_stur | Iniciando processamento do arquivo: /Users/gabrielfornydesouzamuniz/Downloads/2026-04-15_000000000455_d8266ce4caa4.xlsx
+2026-05-06 00:14:08,210 | INFO | robo_stur | Aba/Origem carregada: Transações
+2026-05-06 00:14:08,210 | INFO | robo_stur | Colunas encontradas: ['Transações', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7', 'Unnamed: 8', 'Unnamed: 9', 'Unnamed: 10', 'Unnamed: 11', 'Unnamed: 12', 'Unnamed: 13', 'Unnamed: 14']
+2026-05-06 00:14:08,221 | INFO | robo_stur | Total de transações com código após '*': 208
+2026-05-06 00:14:09,386 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-05-06 00:14:12,558 | WARNING | robo_stur | Usuário ativo em outra sessão. Desbloqueando usuário...
+2026-05-06 00:14:16,301 | INFO | robo_stur | Usuário desbloqueado e login realizado.
+2026-05-06 00:14:16,301 | INFO | robo_stur | Login finalizado com sucesso.
+2026-05-06 00:14:16,301 | INFO | robo_stur | Acessando menu Operacional -> Vendas
+2026-05-06 00:14:16,874 | INFO | robo_stur | Tela de vendas acessada.
+2026-05-06 00:17:42,936 | INFO | robo_stur | Processando linha Excel 4 | Código Companhia: TRVL73
+2026-05-06 00:17:48,098 | INFO | robo_stur | Buscando venda pelo código/localizador: TRVL73
+2026-05-06 00:18:06,391 | ERROR | robo_stur | Erro ao processar linha 4
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 57, in processar_arquivo
+    resultado_venda = stur.buscar_venda(transacao.codigo_companhia)
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 118, in buscar_venda
+    campo_busca.wait_for(state="visible", timeout=15000)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 18005, in wait_for
+    self._sync(self._impl_obj.wait_for(timeout=timeout, state=state))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 692, in wait_for
+    await self._frame.wait_for_selector(
+        self._selector, strict=True, timeout=timeout, state=state
+    )
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 369, in wait_for_selector
+    await self._channel.send(
+        "waitForSelector", self._timeout, locals_to_params(locals())
+    )
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Locator.wait_for: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator("#c0_PH1_UsrPesquisaRapidaLista1_EdtPesquisa") to be visible
+
+2026-05-06 00:18:06,396 | INFO | robo_stur | Processando linha Excel 5 | Código Companhia: CONVER
