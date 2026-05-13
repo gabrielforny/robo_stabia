@@ -1,133 +1,43 @@
-# Robô STUR - Base Inicial
+# Robô STABIA / STUR - Regras da Reunião
 
-Base pronta para você abrir no VS Code e começar os testes.
+Versão refatorada para fluxo lento, auditável e com funções mais diretas.
 
-## O que já está preparado
+## Estratégias implementadas
 
-- Leitura de arquivo `.xlsx`, `.xls` e `.csv`
-- Extração do código da companhia aérea depois do `*`, com 6 dígitos/caracteres
-- Login no STUR
-- Navegação para `Operacional -> Vendas`
-- Busca pelo localizador/código extraído
-- Validação de venda encontrada/não encontrada
-- Comparação entre valor do Excel e `Total do Fornecedor` retornado pelo site
-- Escrita do resultado na última coluna da planilha
-- Fluxo base para abrir venda, acessar pagamento do fornecedor, editar, salvar e gravar
-- Logs em arquivo e terminal
-- `.env` para configurações sensíveis
-- Base para empacotar com PyInstaller
+1. **VCN com venda**
+   - Se a coluna VCN vier com `Venda 1234` ou apenas um número de venda, busca pela coluna **Venda**.
+   - Se retornar uma única venda, considera localizada.
 
-## Instalação
+2. **LATAM**
+   - Se o estabelecimento contém `LATAM` e tem `*ABC123`, busca `ABC123` na coluna **Localizador**.
+   - Compara o valor do Excel contra **Total Fornecedor** ou **Total Cliente**.
 
-Crie o ambiente virtual:
+3. **Genérico / Hotel / Fornecedor**
+   - Busca devagar combinando:
+     - Fornecedor + Data de Emissão
+     - Fornecedor Serviço + Data de Emissão
+     - Fornecedor + Data de Início
+     - Fornecedor Serviço + Data de Início
+     - Fornecedor + Data de Término
+     - Fornecedor Serviço + Data de Término
+   - Se bater valor exato: escreve OK.
+   - Se tiver candidatos próximos: escreve `POSSÍVEL VENDA`.
+   - Se não encontrar: escreve `LANÇAMENTO MANUAL`.
 
-```bash
-python -m venv .venv
-```
-
-Ative:
-
-Windows:
+## Como rodar
 
 ```bash
-.venv\Scripts\activate
+python3 src/main.py --arquivo input/2026-04-15_000000000455_d8266ce4caa4.xlsx
 ```
 
-Mac/Linux:
+Ou sem parâmetro, pegando o Excel/CSV mais recente da pasta Downloads:
 
 ```bash
-source .venv/bin/activate
+python3 src/main.py
 ```
 
-Instale as dependências:
+## Observações
 
-```bash
-pip install -r requirements.txt
-playwright install chromium
-```
-
-A instalação do Playwright exige baixar os navegadores com `playwright install`. A própria documentação oficial informa esse passo para uso com Python.
-
-## Configuração
-
-Copie o arquivo de exemplo:
-
-Windows:
-
-```bash
-copy .env.example .env
-```
-
-Mac/Linux:
-
-```bash
-cp .env.example .env
-```
-
-Preencha no `.env`:
-
-```env
-STUR_USER=seu_usuario
-STUR_PASSWORD=sua_senha
-```
-
-## Rodar
-
-Com navegador visível:
-
-```bash
-python src/main.py --arquivo input/2026-04-15_000000000455_d8266ce4caa4.xlsx
-```
-
-Sem abrir navegador:
-
-```bash
-python src/main.py --arquivo input/2026-04-15_000000000455_d8266ce4caa4.xlsx --headless
-```
-
-## Gerar executável na VM Windows
-
-```bash
-pip install pyinstaller
-pyinstaller --onefile --name robo_stur src/main.py
-```
-
-O executável ficará em:
-
-```text
-dist/robo_stur.exe
-```
-
-O PyInstaller empacota o interpretador Python e dependências dentro do pacote/executável, então o cliente normalmente não precisa instalar Python para executar o `.exe`.
-
-## Arquivos importantes
-
-```text
-src/main.py
-src/stur_automation.py
-src/excel_service.py
-src/models.py
-src/config.py
-src/logger_config.py
-src/email_service.py
-```
-
-## Onde trocar XPaths/selectors
-
-Abra:
-
-```text
-src/stur_automation.py
-```
-
-Procure por:
-
-```python
-SELECTORS = {
-```
-
-Troque os seletores conforme você for estudando a tela/vídeo.
-
-## Observação importante
-
-O fluxo de e-mail ficou como stub/base porque você comentou que ainda não tem acesso ao e-mail. Quando tiver IMAP, Outlook, Gmail ou Microsoft Graph, você implementa em `src/email_service.py`.
+- O robô aguarda 3 segundos entre os passos principais para evitar consulta encavalada.
+- A etapa final de alteração/pagamento do fornecedor ainda está segura/conservadora: apenas loga a venda validada. Quando houver fatura aberta para teste real, implementar os campos finais em `seguir_fluxo_venda_ok`.
+- O parsing de Total Fornecedor/Total Cliente foi protegido para não confundir CNPJ/CPF com valor monetário.

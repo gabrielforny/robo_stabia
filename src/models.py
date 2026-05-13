@@ -7,17 +7,30 @@ from pathlib import Path
 class Transacao:
     indice_planilha: int
     linha_excel: int
-    localizador_original: str
-    codigo_companhia: str
+    estabelecimento: str
+    data_aprovacao: str
+    data_stur: str
     valor_excel: Decimal | None
+    vcn: str
+    codigo_venda_vcn: str | None
+    termo_busca: str
+    coluna_busca: str
+    tipo_busca: str  # VCN, LATAM, GENERICO
 
 
 @dataclass(slots=True)
-class ResultadoVenda:
-    encontrada: bool
-    codigo_venda: str | None = None
-    total_fornecedor: Decimal | None = None
-    mensagem: str = ""
+class CandidatoVenda:
+    codigo_venda: str | None
+    data_emissao: str | None
+    data_inicio: str | None
+    data_termino: str | None
+    fornecedor: str | None
+    fornecedor_servico: str | None
+    localizador: str | None
+    total_cliente: Decimal | None
+    total_fornecedor: Decimal | None
+    origem_busca: str
+    texto_linha: str
 
 
 @dataclass(slots=True)

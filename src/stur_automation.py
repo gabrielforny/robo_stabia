@@ -1,13 +1,13 @@
+import re
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from logging import Logger
 from pathlib import Path
-import re
-from datetime import datetime
 
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, sync_playwright
+from playwright.sync_api import FrameLocator, Page, TimeoutError as PlaywrightTimeoutError, sync_playwright
 
 from config import AppConfig
-from models import ResultadoVenda, Transacao
+from models import CandidatoVenda, Transacao
 
 
 SELECTORS = {
@@ -18,28 +18,21 @@ SELECTORS = {
     "usuario_ativo_msg": "#c0_PH1_Label1",
     "usuario_ativo_desbloquear": "#c0_PH1_LinkButton1",
 
-    # Menu - TROCAR conforme a tela real
+    # Menu principal
     "menu_operacional": "#UsrMenu1_Menu1n4",
     "menu_vendas": "#waM61",
 
-    # Busca em vendas - TROCAR conforme a tela real
-    "campo_busca_vendas": "#c0_PH1_UsrPesquisaRapidaLista1_EdtPesquisa",
-    "botao_buscar_vendas": "button:has-text('Buscar'), input[value='Buscar']",
-
-    # Grid/resultado - TROCAR conforme a tela real
-    "linha_resultado": "table tbody tr",
-    "mensagem_sem_resultado": "text=Nenhum registro encontrado",
-
-    # Detalhe venda - TROCAR conforme a tela real
-    "primeiro_icone_item": "table tbody tr:first-child a, table tbody tr:first-child img",
-    "aba_pagamento_fornecedor": "text=Pagamento do Fornecedor",
-    "botao_editar": "text=Editar",
-    "select_opcao_pagamento": "select[name*='pagamento'], select[id*='pagamento']",
-    "select_fornecedor": "select[name*='fornecedor'], select[id*='fornecedor']",
-    "campo_data": "input[name*='data'], input[id*='data']",
-    "botao_ok": "text=OK",
-    "botao_gravar": "text=GRAVAR",
+    # Iframe e tela de vendas
+    "iframe_stur": "#sturweb",
+    "campo_busca": "#c0_PH1_UsrPesquisaRapidaLista1_EdtPesquisa",
+    "botao_buscar": "#c0_PH1_UsrPesquisaRapidaLista1_BtnPesquisa",
+    "manter_pesquisa": "#c0_PH1_UsrPesquisaRapidaLista1_ChkManterPedquisa",
+    "limpar_filtros": "#c0_PH1_UsrCabecLista1_ImgCancelarFiltro",
+    "grid": "#c0_PH1_GridView1",
+    "linhas_grid": "#c0_PH1_GridView1 tbody tr",
 }
+
+ESPERA_SEGUNDOS = 3
 
 
 class SturAutomation:
@@ -54,13 +47,13 @@ class SturAutomation:
 
     def __enter__(self) -> "SturAutomation":
         self._playwright = sync_playwright().start()
-        self._browser = self._playwright.chromium.launch(headless=self.headless)
+        self._browser = self._playwright.chromium.launch(headless=self.headless, slow_mo=300)
         self._context = self._browser.new_context(
             accept_downloads=True,
             viewport={"width": 1366, "height": 768},
         )
         self.page = self._context.new_page()
-        self.page.set_default_timeout(15000)
+        self.page.set_default_timeout(20000)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -71,185 +64,403 @@ class SturAutomation:
         if self._playwright:
             self._playwright.stop()
 
+    # ==========================================================
+    # ENTRADA NO SISTEMA
+    # ==========================================================
+
     def login(self) -> None:
         page = self._page()
-
         self.logger.info("Acessando STUR: %s", self.config.stur_url)
         page.goto(self.config.stur_url, wait_until="domcontentloaded")
 
         page.locator(SELECTORS["login_usuario"]).fill(self.config.stur_user)
+        self.esperar("usuário preenchido")
+
         page.locator(SELECTORS["login_senha"]).fill(self.config.stur_password)
+        self.esperar("senha preenchida")
+
         page.locator(SELECTORS["login_botao"]).click()
+        self.esperar("login enviado")
 
-        page.wait_for_load_state("networkidle")
-
-        if self._existe(SELECTORS["usuario_ativo_msg"], timeout=3000):
-            texto_msg = page.locator(SELECTORS["usuario_ativo_msg"]).inner_text().strip()
-
-            if "Usuário ativo em outra sessão" in texto_msg:
-                self.logger.warning("Usuário ativo em outra sessão. Desbloqueando usuário...")
-
+        if self._existe_page(SELECTORS["usuario_ativo_msg"], timeout=3000):
+            texto = page.locator(SELECTORS["usuario_ativo_msg"]).inner_text().strip()
+            if "Usuário ativo em outra sessão" in texto:
+                self.logger.warning("Sessão ativa detectada. Clicando em desbloquear usuário ativo...")
                 page.locator(SELECTORS["usuario_ativo_desbloquear"]).click()
-                page.wait_for_load_state("networkidle")
+                self.esperar("usuário desbloqueado")
 
-                self.logger.info("Usuário desbloqueado e login realizado.")
+        self.logger.info("Login realizado.")
 
-        self.logger.info("Login finalizado com sucesso.")
-
-    def acessar_vendas(self) -> None:
+    def acessar_tela_vendas(self) -> None:
         page = self._page()
+        self.logger.info("Acessando Operacional -> Vendas")
 
-        self.logger.info("Acessando menu Operacional -> Vendas")
+        try:
+            page.locator(SELECTORS["menu_operacional"]).hover()
+            self.esperar("hover no menu Operacional")
+            page.locator(SELECTORS["menu_vendas"]).click()
+        except Exception:
+            self.logger.warning("Hover/click no menu falhou. Navegando para ListaVendas.aspx via JavaScript.")
+            page.evaluate("Redirecionar('ListaVendas.aspx?ore')")
 
-        page.locator(SELECTORS["menu_operacional"]).hover()
-        page.wait_for_timeout(500)
+        self.esperar("tela de Vendas carregando")
+        self.aguardar_campo_busca()
+        self.logger.info("Tela de Vendas pronta.")
 
-        page.locator(SELECTORS["menu_vendas"]).click()
-        page.wait_for_load_state("networkidle")
+    # ==========================================================
+    # FLUXOS DE BUSCA - PASSO A PASSO
+    # ==========================================================
 
-        self.logger.info("Tela de vendas acessada.")
+    def buscar_vcn_por_venda(self, transacao: Transacao) -> list[CandidatoVenda]:
+        self.logger.info("Estratégia VCN: buscar direto pela coluna Venda. Termo=%s", transacao.termo_busca)
+        self.limpar_filtros_com_calma()
+        self.clicar_coluna("Venda")
+        self.preencher_search(transacao.termo_busca)
+        self.clicar_botao_pesquisar()
+        self.esperar("consulta por Venda")
+        return self.coletar_resultados_da_tabela(origem_busca="Venda")
 
-    def buscar_venda(self, codigo_companhia: str) -> ResultadoVenda:
-        page = self._page()
-        frame = page.frame_locator("#sturweb")
+    def buscar_latam_por_localizador(self, transacao: Transacao) -> list[CandidatoVenda]:
+        self.logger.info("Estratégia LATAM: buscar Localizador=%s", transacao.termo_busca)
+        self.limpar_filtros_com_calma()
+        self.clicar_coluna("Localizador")
+        self.preencher_search(transacao.termo_busca)
+        self.clicar_botao_pesquisar()
+        self.esperar("consulta por Localizador")
+        return self.coletar_resultados_da_tabela(origem_busca="Localizador")
 
-        self.logger.info("Buscando venda pelo código/localizador: %s", codigo_companhia)
+    def buscar_generico_por_datas(self, transacao: Transacao) -> list[CandidatoVenda]:
+        """
+        Estratégia da reunião para hotéis/fornecedores genéricos:
+        tenta combinações controladas, uma por vez, sem encavalar:
+        - Fornecedor + Data de Emissão
+        - Fornecedor Serviço + Data de Emissão
+        - Fornecedor + Data de Início
+        - Fornecedor Serviço + Data de Início
+        - Fornecedor + Data de Término
+        - Fornecedor Serviço + Data de Término
+        """
+        colunas_fornecedor = ["Fornecedor", "Fornecedor Serviço"]
+        colunas_data = ["Data de Emissão", "Data de Início", "Data de Término"]
+        todos: list[CandidatoVenda] = []
 
-        campo_busca = frame.locator(SELECTORS["campo_busca_vendas"]).first
-        campo_busca.wait_for(state="visible", timeout=15000)
+        for coluna_data in colunas_data:
+            for coluna_fornecedor in colunas_fornecedor:
+                self.logger.info(
+                    "Estratégia GENERICO: %s='%s' + %s='%s'",
+                    coluna_fornecedor,
+                    transacao.termo_busca,
+                    coluna_data,
+                    transacao.data_stur,
+                )
 
-        campo_busca.fill("")
-        campo_busca.fill(codigo_companhia)
-        campo_busca.press("Enter")
+                self.limpar_filtros_com_calma()
 
-        page.wait_for_load_state("networkidle")
+                self.clicar_coluna(coluna_fornecedor)
+                self.preencher_search(transacao.termo_busca)
+                self.clicar_botao_pesquisar()
+                self.esperar(f"consulta por {coluna_fornecedor}")
 
-        if self._existe(SELECTORS["mensagem_sem_resultado"], timeout=3000):
-            return ResultadoVenda(
-                encontrada=False,
-                mensagem=f"Venda não encontrada para código {codigo_companhia}",
+                self.clicar_manter_pesquisa()
+                self.clicar_coluna(coluna_data)
+                self.preencher_search(transacao.data_stur)
+                self.clicar_botao_pesquisar()
+                self.esperar(f"consulta complementar por {coluna_data}")
+
+                candidatos = self.coletar_resultados_da_tabela(
+                    origem_busca=f"{coluna_fornecedor} + {coluna_data}"
+                )
+
+                if candidatos:
+                    self.logger.info("Foram encontrados %s candidato(s) nessa estratégia.", len(candidatos))
+                    todos.extend(candidatos)
+                else:
+                    self.logger.info("Nenhum candidato nessa estratégia.")
+
+        self.limpar_filtros_com_calma()
+        return todos
+
+    # ==========================================================
+    # AÇÕES PEQUENAS E AUDITÁVEIS
+    # ==========================================================
+
+    def clicar_coluna(self, nome_coluna: str) -> None:
+        frame = self._frame()
+        self.logger.info("Clicando na coluna: %s", nome_coluna)
+
+        header = frame.locator("#c0_PH1_GridView1 th").filter(has_text=nome_coluna).first
+        header.wait_for(state="visible", timeout=20000)
+
+        link = header.locator("a").first
+        if link.count() > 0:
+            link.click()
+        else:
+            header.click()
+
+        self.esperar(f"coluna {nome_coluna} selecionada")
+
+    def preencher_search(self, valor: str) -> None:
+        frame = self._frame()
+        self.logger.info("Preenchendo search com: %s", valor)
+
+        campo = frame.locator(SELECTORS["campo_busca"]).first
+        campo.wait_for(state="visible", timeout=20000)
+        campo.click()
+        campo.fill("")
+        self.esperar("campo search limpo")
+        campo.fill(str(valor))
+        self.esperar("campo search preenchido")
+
+    def clicar_botao_pesquisar(self) -> None:
+        frame = self._frame()
+        self.logger.info("Clicando no botão de pesquisar")
+
+        botao = frame.locator(SELECTORS["botao_buscar"]).first
+        if botao.count() > 0:
+            botao.click()
+        else:
+            frame.locator(SELECTORS["campo_busca"]).first.press("Enter")
+
+        self.esperar("pesquisa enviada")
+
+    def clicar_manter_pesquisa(self) -> None:
+        frame = self._frame()
+        self.logger.info("Marcando Manter Pesquisa")
+
+        checkbox = frame.locator(SELECTORS["manter_pesquisa"]).first
+        if checkbox.count() == 0:
+            self.logger.warning("Checkbox Manter Pesquisa não encontrado.")
+            return
+
+        try:
+            if not checkbox.is_checked():
+                checkbox.check(force=True)
+        except Exception:
+            checkbox.click(force=True)
+
+        self.esperar("manter pesquisa marcado")
+
+    def desmarcar_manter_pesquisa(self) -> None:
+        frame = self._frame()
+        checkbox = frame.locator(SELECTORS["manter_pesquisa"]).first
+        if checkbox.count() == 0:
+            return
+
+        try:
+            if checkbox.is_checked():
+                checkbox.uncheck(force=True)
+                self.esperar("manter pesquisa desmarcado")
+        except Exception:
+            try:
+                checkbox.click(force=True)
+                self.esperar("manter pesquisa desmarcado via click")
+            except Exception:
+                self.logger.warning("Não foi possível desmarcar Manter Pesquisa.")
+
+    def limpar_filtros_com_calma(self) -> None:
+        self.logger.info("Limpando filtros para começar próximo passo/item")
+        frame = self._frame()
+
+        self.desmarcar_manter_pesquisa()
+
+        limpar = frame.locator(SELECTORS["limpar_filtros"]).first
+        if limpar.count() > 0:
+            try:
+                limpar.click(force=True)
+                self.esperar("limpar filtros clicado")
+            except Exception as exc:
+                self.logger.warning("Falha ao clicar em limpar filtros: %s", exc)
+        else:
+            self.logger.warning("Botão Limpar/Cancelar filtro não encontrado. Limpando campo search manualmente.")
+            try:
+                campo = frame.locator(SELECTORS["campo_busca"]).first
+                if campo.count() > 0:
+                    campo.fill("")
+                    self.esperar("campo search limpo manualmente")
+            except Exception:
+                pass
+
+        self.aguardar_campo_busca()
+
+    def coletar_resultados_da_tabela(self, origem_busca: str) -> list[CandidatoVenda]:
+        frame = self._frame()
+        self.logger.info("Validando resultados da tabela. Origem=%s", origem_busca)
+
+        if frame.locator("text=Nenhum registro encontrado").count() > 0:
+            self.logger.info("Mensagem 'Nenhum registro encontrado' detectada.")
+            return []
+
+        linhas = frame.locator(SELECTORS["linhas_grid"])
+        total_linhas = linhas.count()
+        if total_linhas <= 1:
+            self.logger.info("Tabela sem linhas de resultado.")
+            return []
+
+        headers = self._obter_headers_grid()
+        self.logger.info("Colunas detectadas: %s", headers)
+
+        candidatos: list[CandidatoVenda] = []
+
+        for i in range(1, total_linhas):  # pula header
+            linha = linhas.nth(i)
+            celulas = linha.locator("td")
+            qtd_celulas = celulas.count()
+
+            if qtd_celulas == 0:
+                continue
+
+            valores = [celulas.nth(j).inner_text().strip() for j in range(qtd_celulas)]
+            dados = self._mapear_linha_por_headers(headers, valores)
+
+            candidato = CandidatoVenda(
+                codigo_venda=self._valor_coluna(dados, "Venda"),
+                data_emissao=self._valor_coluna(dados, "Data de Emissão"),
+                data_inicio=self._valor_coluna(dados, "Data de Início"),
+                data_termino=self._valor_coluna(dados, "Data de Término"),
+                fornecedor=self._valor_coluna(dados, "Fornecedor"),
+                fornecedor_servico=self._valor_coluna(dados, "Fornecedor Serviço"),
+                localizador=self._valor_coluna(dados, "Localizador"),
+                total_cliente=self._parse_valor_monetario(self._valor_coluna(dados, "Total Cliente")),
+                total_fornecedor=self._parse_valor_monetario(self._valor_coluna(dados, "Total Fornecedor")),
+                origem_busca=origem_busca,
+                texto_linha=" | ".join(valores),
             )
 
-        linhas = page.locator(SELECTORS["linha_resultado"])
-
-        if linhas.count() == 0:
-            return ResultadoVenda(
-                encontrada=False,
-                mensagem=f"Nenhuma linha retornada para código {codigo_companhia}",
+            self.logger.info(
+                "Candidato coletado | Venda=%s | Fornecedor=%s | Forn.Serviço=%s | Emissão=%s | Início=%s | Término=%s | TotalCliente=%s | TotalFornecedor=%s",
+                candidato.codigo_venda,
+                candidato.fornecedor,
+                candidato.fornecedor_servico,
+                candidato.data_emissao,
+                candidato.data_inicio,
+                candidato.data_termino,
+                candidato.total_cliente,
+                candidato.total_fornecedor,
             )
 
-        primeira_linha = linhas.first
-        texto_linha = primeira_linha.inner_text(timeout=5000)
+            candidatos.append(candidato)
 
-        codigo_venda = self._extrair_codigo_venda(texto_linha)
-        total_fornecedor = self._extrair_total_fornecedor(texto_linha)
+        self.logger.info("Total de candidatos coletados: %s", len(candidatos))
+        return candidatos
 
-        return ResultadoVenda(
-            encontrada=True,
-            codigo_venda=codigo_venda,
-            total_fornecedor=total_fornecedor,
-            mensagem="Venda encontrada.",
-        )
-
-    def processar_pagamento_fornecedor(self, transacao: Transacao) -> None:
+    def seguir_fluxo_venda_ok(self, candidato: CandidatoVenda) -> None:
         """
-        Fluxo base.
-        Troque os selectors e complemente campos conforme o vídeo/tela real.
+        Base para a etapa final. Mantive conservador para não alterar venda errada.
+        Quando validarmos com fatura aberta, aqui entram:
+        - abrir primeiro ícone
+        - pagamento do fornecedor
+        - editar
+        - forma pagamento/cartão/data
+        - OK
+        - GRAVAR
         """
-        page = self._page()
-
         self.logger.info(
-            "Processando pagamento do fornecedor para código %s",
-            transacao.codigo_companhia,
+            "Venda validada para próxima etapa. Venda=%s | Origem=%s",
+            candidato.codigo_venda,
+            candidato.origem_busca,
         )
+        self.esperar("fim da validação da venda")
 
-        page.locator(SELECTORS["primeiro_icone_item"]).first.click()
-        page.wait_for_load_state("networkidle")
+    # ==========================================================
+    # SUPORTE
+    # ==========================================================
 
-        page.locator(SELECTORS["aba_pagamento_fornecedor"]).first.click()
-        page.wait_for_load_state("networkidle")
+    def aguardar_campo_busca(self) -> None:
+        self._frame().locator(SELECTORS["campo_busca"]).first.wait_for(state="visible", timeout=20000)
 
-        page.locator(SELECTORS["botao_editar"]).first.click()
-
-        # Exemplo: selecionar primeira opção válida.
-        # Depois você pode trocar por valor específico.
-        if self._existe(SELECTORS["select_opcao_pagamento"], timeout=3000):
-            page.locator(SELECTORS["select_opcao_pagamento"]).first.select_option(index=1)
-
-        if self._existe(SELECTORS["select_fornecedor"], timeout=3000):
-            page.locator(SELECTORS["select_fornecedor"]).first.select_option(index=1)
-
-        # Exemplo: alterar data somente se precisar.
-        # page.locator(SELECTORS["campo_data"]).first.fill("15/04/2026")
-
-        page.locator(SELECTORS["botao_ok"]).first.click()
-        page.wait_for_load_state("networkidle")
-
-        page.locator(SELECTORS["botao_gravar"]).first.click()
-        page.wait_for_load_state("networkidle")
-
-        self.logger.info("Pagamento do fornecedor gravado para %s", transacao.codigo_companhia)
+    def esperar(self, motivo: str = "") -> None:
+        if motivo:
+            self.logger.info("Aguardando %ss — %s", ESPERA_SEGUNDOS, motivo)
+        self._page().wait_for_timeout(ESPERA_SEGUNDOS * 1000)
 
     def salvar_screenshot_erro(self, codigo: str) -> Path | None:
         if not self.config.salvar_screenshot_erro:
             return None
-
-        page = self._page()
         screenshots_dir = self.config.logs_dir / "screenshots"
         screenshots_dir.mkdir(exist_ok=True)
-
         arquivo = screenshots_dir / f"erro_{codigo}_{datetime.now():%Y%m%d_%H%M%S}.png"
-        page.screenshot(path=str(arquivo), full_page=True)
-
+        self._page().screenshot(path=str(arquivo), full_page=True)
         return arquivo
 
-    def _page(self) -> Page:
-        if self.page is None:
-            raise RuntimeError("Browser não inicializado.")
-        return self.page
+    def _obter_headers_grid(self) -> list[str]:
+        frame = self._frame()
+        headers_locator = frame.locator("#c0_PH1_GridView1 th")
+        headers: list[str] = []
 
-    def _existe(self, selector: str, timeout: int = 1000) -> bool:
-        try:
-            self._page().locator(selector).first.wait_for(state="visible", timeout=timeout)
-            return True
-        except PlaywrightTimeoutError:
-            return False
+        for i in range(headers_locator.count()):
+            texto = headers_locator.nth(i).inner_text().strip()
+            if texto:
+                headers.append(" ".join(texto.split()))
 
-    def _extrair_codigo_venda(self, texto_linha: str) -> str | None:
-        """
-        Ajuste quando souber a coluna exata.
-        Por enquanto pega o primeiro número grande da linha.
-        """
-        match = re.search(r"\b\d{4,}\b", texto_linha)
-        return match.group(0) if match else None
+        return headers
 
-    def _extrair_total_fornecedor(self, texto_linha: str) -> Decimal | None:
-        """
-        Ajuste ideal:
-        - pegar célula da coluna "Total do Fornecedor" diretamente no grid.
+    def _mapear_linha_por_headers(self, headers: list[str], valores: list[str]) -> dict[str, str]:
+        if len(headers) != len(valores):
+            self.logger.warning(
+                "Quantidade de headers (%s) diferente de células (%s). Headers=%s | Valores=%s",
+                len(headers), len(valores), headers, valores,
+            )
 
-        Por enquanto:
-        - procura valores no formato brasileiro na linha
-        - retorna o último valor monetário encontrado
-        """
-        matches = re.findall(r"(?:R\$\s*)?[-+]?\d{1,3}(?:\.\d{3})*,\d{2}", texto_linha)
+        limite = min(len(headers), len(valores))
+        return {headers[i]: valores[i] for i in range(limite)}
 
-        if not matches:
+    def _valor_coluna(self, dados: dict[str, str], nome_coluna: str) -> str | None:
+        alvo = self._normalizar(nome_coluna)
+        for coluna, valor in dados.items():
+            if self._normalizar(coluna) == alvo:
+                return valor.strip() if valor is not None else None
+        return None
+
+    def _parse_valor_monetario(self, valor: str | None) -> Decimal | None:
+        if valor is None:
             return None
 
-        return self._parse_decimal(matches[-1])
+        texto_original = str(valor).strip()
+        if not texto_original or texto_original.lower() == "nan":
+            return None
 
-    def _parse_decimal(self, value: str) -> Decimal | None:
-        texto = str(value).replace("R$", "").replace(" ", "").strip()
+        # Evita aceitar CNPJ/CPF/códigos grandes como se fossem valor.
+        apenas_digitos = re.sub(r"\D", "", texto_original)
+        if "," not in texto_original and "." not in texto_original and len(apenas_digitos) > 6:
+            return None
 
+        texto = texto_original.replace("R$", "").replace(" ", "")
         if "," in texto and "." in texto:
             texto = texto.replace(".", "").replace(",", ".")
         elif "," in texto:
             texto = texto.replace(",", ".")
 
         texto = re.sub(r"[^0-9.-]", "", texto)
+        if not texto:
+            return None
 
         try:
             return Decimal(texto)
         except InvalidOperation:
             return None
+
+    def _normalizar(self, texto: str) -> str:
+        return (
+            str(texto).strip().lower()
+            .replace("ç", "c")
+            .replace("ã", "a").replace("á", "a").replace("à", "a").replace("â", "a")
+            .replace("é", "e").replace("ê", "e")
+            .replace("í", "i")
+            .replace("ó", "o").replace("ô", "o").replace("õ", "o")
+            .replace("ú", "u")
+        )
+
+    def _existe_page(self, selector: str, timeout: int = 1000) -> bool:
+        try:
+            self._page().locator(selector).first.wait_for(state="visible", timeout=timeout)
+            return True
+        except PlaywrightTimeoutError:
+            return False
+
+    def _frame(self) -> FrameLocator:
+        return self._page().frame_locator(SELECTORS["iframe_stur"])
+
+    def _page(self) -> Page:
+        if self.page is None:
+            raise RuntimeError("Browser não inicializado.")
+        return self.page

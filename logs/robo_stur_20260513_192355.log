@@ -1,0 +1,160 @@
+2026-05-13 19:23:55,859 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260513_192355.log
+2026-05-13 19:23:55,860 | INFO | robo_stur | Iniciando processamento: /Users/gabrielfornydesouzamuniz/Downloads/2026-04-15_000000000455_d8266ce4caa4.xlsx
+2026-05-13 19:23:56,120 | INFO | robo_stur | Aba carregada: Transações | Colunas: ['Unnamed: 0', 'Data da transação', 'Data de aprovação', 'Cartão', 'Usuario', 'Estabelecimento', 'Tipo de transação', 'Código de autorização', 'Valor em moeda estrangeira', 'Código da moeda estrangeira', 'Taxa de câmbio', 'Valor em R$', 'Parcela', 'IOF', 'VCN']
+2026-05-13 19:23:56,130 | INFO | robo_stur | Total de linhas a processar: 469
+2026-05-13 19:23:57,265 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-05-13 19:24:07,273 | INFO | robo_stur | Aguardando 3s — usuário preenchido
+2026-05-13 19:24:10,617 | INFO | robo_stur | Aguardando 3s — senha preenchida
+2026-05-13 19:24:14,500 | INFO | robo_stur | Aguardando 3s — login enviado
+2026-05-13 19:24:17,526 | WARNING | robo_stur | Sessão ativa detectada. Clicando em desbloquear usuário ativo...
+2026-05-13 19:24:17,863 | INFO | robo_stur | Aguardando 3s — usuário desbloqueado
+2026-05-13 19:24:20,867 | INFO | robo_stur | Login realizado.
+2026-05-13 19:24:20,867 | INFO | robo_stur | Acessando Operacional -> Vendas
+2026-05-13 19:24:21,237 | INFO | robo_stur | Aguardando 3s — hover no menu Operacional
+2026-05-13 19:24:24,598 | INFO | robo_stur | Aguardando 3s — tela de Vendas carregando
+2026-05-13 19:24:27,631 | INFO | robo_stur | Tela de Vendas pronta.
+2026-05-13 19:24:27,632 | INFO | robo_stur | ============================================================
+2026-05-13 19:24:27,632 | INFO | robo_stur | Linha Excel 2
+2026-05-13 19:24:27,632 | INFO | robo_stur | Tipo busca: GENERICO
+2026-05-13 19:24:27,632 | INFO | robo_stur | Estabelecimento: AdaptaOrg
+2026-05-13 19:24:27,632 | INFO | robo_stur | VCN: nan | Código Venda VCN: None
+2026-05-13 19:24:27,632 | INFO | robo_stur | Termo: AdaptaOrg | Coluna: Fornecedor
+2026-05-13 19:24:27,632 | INFO | robo_stur | Data STUR: 21/03/2026 | Valor Excel: 99
+2026-05-13 19:24:27,632 | INFO | robo_stur | Estratégia GENERICO: Fornecedor='AdaptaOrg' + Data de Emissão='21/03/2026'
+2026-05-13 19:24:27,632 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-05-13 19:24:27,647 | WARNING | robo_stur | Botão Limpar/Cancelar filtro não encontrado. Limpando campo search manualmente.
+2026-05-13 19:24:27,959 | INFO | robo_stur | Aguardando 3s — campo search limpo manualmente
+2026-05-13 19:24:30,979 | INFO | robo_stur | Clicando na coluna: Fornecedor
+2026-05-13 19:24:31,333 | INFO | robo_stur | Aguardando 3s — coluna Fornecedor selecionada
+2026-05-13 19:24:34,338 | INFO | robo_stur | Preenchendo search com: AdaptaOrg
+2026-05-13 19:24:35,022 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-05-13 19:24:38,344 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-05-13 19:24:41,347 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-05-13 19:24:41,697 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-05-13 19:24:44,702 | INFO | robo_stur | Aguardando 3s — consulta por Fornecedor
+2026-05-13 19:24:47,707 | INFO | robo_stur | Marcando Manter Pesquisa
+2026-05-13 19:24:48,045 | INFO | robo_stur | Aguardando 3s — manter pesquisa marcado
+2026-05-13 19:24:51,050 | INFO | robo_stur | Clicando na coluna: Data de Emissão
+2026-05-13 19:24:51,418 | INFO | robo_stur | Aguardando 3s — coluna Data de Emissão selecionada
+2026-05-13 19:24:54,422 | INFO | robo_stur | Preenchendo search com: 21/03/2026
+2026-05-13 19:24:55,102 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-05-13 19:24:58,421 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-05-13 19:25:01,425 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-05-13 19:25:01,781 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-05-13 19:25:04,786 | INFO | robo_stur | Aguardando 3s — consulta complementar por Data de Emissão
+2026-05-13 19:25:07,790 | INFO | robo_stur | Validando resultados da tabela. Origem=Fornecedor + Data de Emissão
+2026-05-13 19:25:07,821 | INFO | robo_stur | Mensagem 'Nenhum registro encontrado' detectada.
+2026-05-13 19:25:07,821 | INFO | robo_stur | Nenhum candidato nessa estratégia.
+2026-05-13 19:25:07,821 | INFO | robo_stur | Estratégia GENERICO: Fornecedor Serviço='AdaptaOrg' + Data de Emissão='21/03/2026'
+2026-05-13 19:25:07,821 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-05-13 19:25:08,139 | INFO | robo_stur | Aguardando 3s — manter pesquisa desmarcado
+2026-05-13 19:25:11,514 | INFO | robo_stur | Aguardando 3s — limpar filtros clicado
+2026-05-13 19:25:14,549 | INFO | robo_stur | Clicando na coluna: Fornecedor Serviço
+2026-05-13 19:25:14,898 | INFO | robo_stur | Aguardando 3s — coluna Fornecedor Serviço selecionada
+2026-05-13 19:25:17,903 | INFO | robo_stur | Preenchendo search com: AdaptaOrg
+2026-05-13 19:25:18,587 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-05-13 19:25:21,909 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-05-13 19:25:24,915 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-05-13 19:25:25,268 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-05-13 19:25:28,273 | INFO | robo_stur | Aguardando 3s — consulta por Fornecedor Serviço
+2026-05-13 19:25:31,279 | INFO | robo_stur | Marcando Manter Pesquisa
+2026-05-13 19:25:31,619 | INFO | robo_stur | Aguardando 3s — manter pesquisa marcado
+2026-05-13 19:25:34,624 | INFO | robo_stur | Clicando na coluna: Data de Emissão
+2026-05-13 19:25:34,996 | INFO | robo_stur | Aguardando 3s — coluna Data de Emissão selecionada
+2026-05-13 19:25:38,001 | INFO | robo_stur | Preenchendo search com: 21/03/2026
+2026-05-13 19:25:38,679 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-05-13 19:25:41,999 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-05-13 19:25:45,002 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-05-13 19:25:45,365 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-05-13 19:25:48,369 | INFO | robo_stur | Aguardando 3s — consulta complementar por Data de Emissão
+2026-05-13 19:25:51,372 | INFO | robo_stur | Validando resultados da tabela. Origem=Fornecedor Serviço + Data de Emissão
+2026-05-13 19:25:51,400 | INFO | robo_stur | Mensagem 'Nenhum registro encontrado' detectada.
+2026-05-13 19:25:51,400 | INFO | robo_stur | Nenhum candidato nessa estratégia.
+2026-05-13 19:25:51,400 | INFO | robo_stur | Estratégia GENERICO: Fornecedor='AdaptaOrg' + Data de Início='21/03/2026'
+2026-05-13 19:25:51,400 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-05-13 19:25:51,718 | INFO | robo_stur | Aguardando 3s — manter pesquisa desmarcado
+2026-05-13 19:25:55,095 | INFO | robo_stur | Aguardando 3s — limpar filtros clicado
+2026-05-13 19:25:58,132 | INFO | robo_stur | Clicando na coluna: Fornecedor
+2026-05-13 19:25:58,483 | INFO | robo_stur | Aguardando 3s — coluna Fornecedor selecionada
+2026-05-13 19:26:01,486 | INFO | robo_stur | Preenchendo search com: AdaptaOrg
+2026-05-13 19:26:02,168 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-05-13 19:26:05,486 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-05-13 19:26:08,490 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-05-13 19:26:08,831 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-05-13 19:26:11,836 | INFO | robo_stur | Aguardando 3s — consulta por Fornecedor
+2026-05-13 19:26:14,841 | INFO | robo_stur | Marcando Manter Pesquisa
+2026-05-13 19:26:15,180 | INFO | robo_stur | Aguardando 3s — manter pesquisa marcado
+2026-05-13 19:26:18,185 | INFO | robo_stur | Clicando na coluna: Data de Início
+2026-05-13 19:26:38,289 | ERROR | robo_stur | Erro inesperado na linha 2
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 181, in processar_arquivo
+    sucesso = processar_transacao(
+        stur=stur,
+    ...<4 lines>...
+        logger=logger,
+    )
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 131, in processar_transacao
+    candidatos = stur.buscar_generico_por_datas(transacao)
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 165, in buscar_generico_por_datas
+    self.clicar_coluna(coluna_data)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 192, in clicar_coluna
+    header.wait_for(state="visible", timeout=20000)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 18005, in wait_for
+    self._sync(self._impl_obj.wait_for(timeout=timeout, state=state))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 692, in wait_for
+    await self._frame.wait_for_selector(
+        self._selector, strict=True, timeout=timeout, state=state
+    )
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 369, in wait_for_selector
+    await self._channel.send(
+        "waitForSelector", self._timeout, locals_to_params(locals())
+    )
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Locator.wait_for: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("#sturweb").content_frame.locator("#c0_PH1_GridView1 th").filter(has_text="Data de Início").first to be visible
+
+2026-05-13 19:26:38,291 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-05-13 19:26:38,600 | INFO | robo_stur | Aguardando 3s — manter pesquisa desmarcado
+2026-05-13 19:26:41,979 | INFO | robo_stur | Aguardando 3s — limpar filtros clicado
+2026-05-13 19:26:45,014 | INFO | robo_stur | ============================================================
+2026-05-13 19:26:45,015 | INFO | robo_stur | Linha Excel 3
+2026-05-13 19:26:45,015 | INFO | robo_stur | Tipo busca: GENERICO
+2026-05-13 19:26:45,015 | INFO | robo_stur | Estabelecimento: EG*TRVL73191326143403
+2026-05-13 19:26:45,015 | INFO | robo_stur | VCN: nan | Código Venda VCN: None
+2026-05-13 19:26:45,015 | INFO | robo_stur | Termo: EG*TRVL73191326143403 | Coluna: Fornecedor
+2026-05-13 19:26:45,015 | INFO | robo_stur | Data STUR: 28/03/2026 | Valor Excel: 669.57
+2026-05-13 19:26:45,015 | INFO | robo_stur | Estratégia GENERICO: Fornecedor='EG*TRVL73191326143403' + Data de Emissão='28/03/2026'
+2026-05-13 19:26:45,015 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-05-13 19:26:45,032 | WARNING | robo_stur | Botão Limpar/Cancelar filtro não encontrado. Limpando campo search manualmente.
+2026-05-13 19:26:45,346 | INFO | robo_stur | Aguardando 3s — campo search limpo manualmente
+2026-05-13 19:26:48,365 | INFO | robo_stur | Clicando na coluna: Fornecedor
+2026-05-13 19:26:48,722 | INFO | robo_stur | Aguardando 3s — coluna Fornecedor selecionada
+2026-05-13 19:26:51,725 | INFO | robo_stur | Preenchendo search com: EG*TRVL73191326143403
+2026-05-13 19:26:52,411 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-05-13 19:26:55,735 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-05-13 19:26:58,739 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-05-13 19:26:59,135 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-05-13 19:27:02,141 | INFO | robo_stur | Aguardando 3s — consulta por Fornecedor
+2026-05-13 19:27:05,146 | INFO | robo_stur | Marcando Manter Pesquisa
+2026-05-13 19:27:05,483 | INFO | robo_stur | Aguardando 3s — manter pesquisa marcado
+2026-05-13 19:27:08,488 | INFO | robo_stur | Clicando na coluna: Data de Emissão
+2026-05-13 19:27:08,861 | INFO | robo_stur | Aguardando 3s — coluna Data de Emissão selecionada
+2026-05-13 19:27:11,864 | INFO | robo_stur | Preenchendo search com: 28/03/2026
+2026-05-13 19:27:12,551 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-05-13 19:27:15,871 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-05-13 19:27:18,876 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-05-13 19:27:19,211 | INFO | robo_stur | Aguardando 3s — pesquisa enviada

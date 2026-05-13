@@ -7,6 +7,36 @@ import pandas as pd
 from config import AppConfig
 from models import Transacao
 
+MESES_PT = {
+    "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04",
+    "Mai": "05", "Jun": "06", "Jul": "07", "Ago": "08",
+    "Set": "09", "Out": "10", "Nov": "11", "Dez": "12",
+}
+
+
+def converter_data_excel_para_stur(data_excel: str) -> str:
+    """Converte datas do Excel para dd/mm/aaaa quando possível."""
+    texto = str(data_excel or "").strip()
+    if not texto or texto.lower() == "nan":
+        return ""
+
+    # Ex: 28/Mar/2026
+    partes = texto.split("/")
+    if len(partes) == 3:
+        dia, mes, ano = partes
+        mes_num = MESES_PT.get(mes.strip().title(), mes.strip())
+        return f"{dia.strip().zfill(2)}/{mes_num.zfill(2)}/{ano.strip()}"
+
+    # Ex: pandas Timestamp ou string ISO
+    try:
+        dt = pd.to_datetime(texto, dayfirst=True, errors="coerce")
+        if pd.notna(dt):
+            return dt.strftime("%d/%m/%Y")
+    except Exception:
+        pass
+
+    return texto
+
 
 class ExcelService:
     def __init__(self, config: AppConfig):
@@ -24,52 +54,46 @@ class ExcelService:
 
         if extensao in {".xlsx", ".xls"}:
             sheet_name = self._definir_aba_transacoes(arquivo)
-            df = pd.read_excel(arquivo, sheet_name=sheet_name, dtype=str)
+            header_row = self._encontrar_linha_cabecalho(arquivo, sheet_name)
+            df = pd.read_excel(arquivo, sheet_name=sheet_name, dtype=str, header=header_row)
             return self._normalizar_df(df), str(sheet_name)
 
         raise ValueError(f"Formato não suportado: {extensao}")
 
-    def _definir_aba_transacoes(self, arquivo: Path) -> str | int:
-        if self.config.excel_sheet_transacoes:
-            return self.config.excel_sheet_transacoes
-
-        excel = pd.ExcelFile(arquivo)
-        abas = excel.sheet_names
-
-        for aba in abas:
-            if self._normalizar_texto(aba) in {"transacoes", "transação", "transacao", "transactions"}:
-                return aba
-
-        return 0
-
-    def _normalizar_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
-        df.columns = [str(col).strip() for col in df.columns]
-        df = df.dropna(how="all").reset_index(drop=True)
-        return df
-
     def montar_transacoes(self, df: pd.DataFrame) -> list[Transacao]:
-        coluna_localizador = self._resolver_coluna_localizador(df)
+        coluna_estabelecimento = self._resolver_coluna_estabelecimento(df)
+        coluna_data = self._resolver_coluna_data_aprovacao(df)
         coluna_valor = self._resolver_coluna_valor(df)
+        coluna_vcn = self._resolver_coluna_vcn(df)
 
         transacoes: list[Transacao] = []
 
         for index, row in df.iterrows():
-            localizador_original = str(row.get(coluna_localizador, "") or "").strip()
-            codigo_companhia = self.extrair_codigo_companhia(localizador_original)
-
-            if not codigo_companhia:
+            estabelecimento = str(row.get(coluna_estabelecimento, "") or "").strip()
+            if not estabelecimento or estabelecimento.lower() == "nan":
                 continue
 
+            data_excel = str(row.get(coluna_data, "") or "").strip() if coluna_data else ""
+            data_stur = converter_data_excel_para_stur(data_excel)
             valor_excel = self._parse_decimal(row.get(coluna_valor)) if coluna_valor else None
+            vcn = str(row.get(coluna_vcn, "") or "").strip() if coluna_vcn else ""
+
+            codigo_venda_vcn = self._extrair_codigo_venda_vcn(vcn)
+            termo_busca, coluna_busca, tipo_busca = self._definir_estrategia_busca(estabelecimento, codigo_venda_vcn)
 
             transacoes.append(
                 Transacao(
                     indice_planilha=index,
                     linha_excel=index + 2,
-                    localizador_original=localizador_original,
-                    codigo_companhia=codigo_companhia,
+                    estabelecimento=estabelecimento,
+                    data_aprovacao=data_excel,
+                    data_stur=data_stur,
                     valor_excel=valor_excel,
+                    vcn=vcn,
+                    codigo_venda_vcn=codigo_venda_vcn,
+                    termo_busca=termo_busca,
+                    coluna_busca=coluna_busca,
+                    tipo_busca=tipo_busca,
                 )
             )
 
@@ -77,10 +101,8 @@ class ExcelService:
 
     def escrever_resultado(self, df: pd.DataFrame, transacao: Transacao, resultado: str) -> None:
         coluna = self.config.coluna_resultado
-
         if coluna not in df.columns:
             df[coluna] = ""
-
         df.at[transacao.indice_planilha, coluna] = resultado
 
     def salvar_saida(self, df: pd.DataFrame, arquivo_original: Path) -> Path:
@@ -89,13 +111,6 @@ class ExcelService:
         return saida
 
     def validar_total_primeira_aba(self, arquivo: Path, df_processado: pd.DataFrame) -> str:
-        """
-        Base para validar a primeira aba com a última linha "Total a pagar".
-
-        Como o layout real pode variar, deixei uma busca genérica:
-        - Procura por qualquer célula contendo "Total a pagar"
-        - Tenta capturar o primeiro valor numérico na mesma linha
-        """
         if arquivo.suffix.lower() not in {".xlsx", ".xls"}:
             return "Validação de total não aplicada para CSV."
 
@@ -105,7 +120,6 @@ class ExcelService:
         for _, row in primeira_aba.iterrows():
             valores = [str(v).strip() for v in row.tolist() if str(v).strip() and str(v) != "nan"]
             linha_texto = " ".join(valores).lower()
-
             if "total a pagar" in linha_texto:
                 total_a_pagar = self._primeiro_decimal_na_linha(valores)
                 break
@@ -115,112 +129,104 @@ class ExcelService:
 
         return f"Total a pagar localizado na primeira aba: {total_a_pagar}"
 
-    def extrair_codigo_companhia(self, valor: str) -> str | None:
-        """
-        Regra:
-        - Procura o conteúdo depois do *
-        - Captura 6 caracteres alfanuméricos ou 6 dígitos
+    def _definir_estrategia_busca(self, estabelecimento: str, codigo_venda_vcn: str | None) -> tuple[str, str, str]:
+        if codigo_venda_vcn:
+            return codigo_venda_vcn, "Venda", "VCN"
 
-        Exemplos:
-        ABC*123456 -> 123456
-        LOCALIZADOR * G3AB12 -> G3AB12
+        if "latam" in estabelecimento.lower():
+            match = re.search(r"\*\s*([A-Za-z0-9]{6})", estabelecimento)
+            if match:
+                return match.group(1).upper(), "Localizador", "LATAM"
+
+        return estabelecimento, "Fornecedor", "GENERICO"
+
+    def _extrair_codigo_venda_vcn(self, vcn: str) -> str | None:
         """
-        if not valor or "*" not in valor:
+        Cenário futuro explicado pelo cliente:
+        VCN pode vir com algo como 'Venda 2238' ou texto contendo o número da venda.
+        """
+        texto = str(vcn or "").strip()
+        if not texto or texto.lower() == "nan":
             return None
 
-        depois_asterisco = valor.split("*", 1)[1].strip()
-        match = re.search(r"([A-Za-z0-9]{6})", depois_asterisco)
+        match = re.search(r"venda\D*(\d{3,})", texto, flags=re.IGNORECASE)
+        if match:
+            return match.group(1)
 
-        if not match:
-            return None
+        # fallback conservador: se o VCN for só número, assume venda
+        if re.fullmatch(r"\d{3,}", texto):
+            return texto
 
-        return match.group(1).upper()
+        return None
 
-    def _resolver_coluna_localizador(self, df: pd.DataFrame) -> str:
-        if self.config.coluna_localizador and self.config.coluna_localizador in df.columns:
-            return self.config.coluna_localizador
+    def _encontrar_linha_cabecalho(self, arquivo: Path, sheet_name: str | int) -> int:
+        amostra = pd.read_excel(arquivo, sheet_name=sheet_name, header=None, nrows=12, dtype=str)
+        palavras_chave = {"estabelecimento", "valor em r$", "data de aprovação", "vcn"}
+        for i, row in amostra.iterrows():
+            valores = [str(v).strip().lower() for v in row if str(v).strip() and str(v) != "nan"]
+            if any(any(kw in v for kw in palavras_chave) for v in valores):
+                return i
+        return 0
 
-        candidatos = [
-            "localizador",
-            "localizador companhia",
-            "localizador da companhia",
-            "descricao",
-            "descrição",
-            "historico",
-            "histórico",
-            "documento",
-            "referencia",
-            "referência",
-        ]
+    def _definir_aba_transacoes(self, arquivo: Path) -> str | int:
+        if self.config.excel_sheet_transacoes:
+            return self.config.excel_sheet_transacoes
 
-        return self._procurar_coluna(df, candidatos, obrigatoria=True, finalidade="localizador")
+        excel = pd.ExcelFile(arquivo)
+        for aba in excel.sheet_names:
+            if self._normalizar_texto(aba) in {"transacoes", "transacao", "transactions"}:
+                return aba
+        return 0
+
+    def _normalizar_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        df.columns = [str(col).strip() for col in df.columns]
+        df = df.dropna(how="all").reset_index(drop=True)
+        return df
+
+    def _resolver_coluna_estabelecimento(self, df: pd.DataFrame) -> str:
+        candidatos = ["estabelecimento", "fornecedor", "descricao", "descrição", "historico", "histórico"]
+        return self._procurar_coluna(df, candidatos, obrigatoria=True, finalidade="estabelecimento")
+
+    def _resolver_coluna_data_aprovacao(self, df: pd.DataFrame) -> str | None:
+        candidatos = ["data de aprovação", "data de aprovacao", "data aprovacao", "data aprovação", "data da transação", "data da transacao", "data"]
+        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="data de aprovação")
 
     def _resolver_coluna_valor(self, df: pd.DataFrame) -> str | None:
-        if self.config.coluna_valor_excel and self.config.coluna_valor_excel in df.columns:
-            return self.config.coluna_valor_excel
-
-        candidatos = [
-            "valor",
-            "valor excel",
-            "valor pago",
-            "valor pagamento",
-            "total",
-            "total a pagar",
-            "valor transacao",
-            "valor transação",
-        ]
-
+        candidatos = ["valor em r$", "valor em reais", "valor", "valor pago", "total", "total a pagar"]
         return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="valor")
 
-    def _procurar_coluna(
-        self,
-        df: pd.DataFrame,
-        candidatos: list[str],
-        obrigatoria: bool,
-        finalidade: str,
-    ) -> str | None:
-        mapa = {self._normalizar_texto(col): col for col in df.columns}
+    def _resolver_coluna_vcn(self, df: pd.DataFrame) -> str | None:
+        candidatos = ["vcn", "venda", "codigo venda", "código venda"]
+        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="VCN")
 
+    def _procurar_coluna(self, df: pd.DataFrame, candidatos: list[str], obrigatoria: bool, finalidade: str) -> str | None:
+        mapa = {self._normalizar_texto(col): col for col in df.columns}
         for candidato in candidatos:
             normalizado = self._normalizar_texto(candidato)
             if normalizado in mapa:
                 return mapa[normalizado]
 
-        if finalidade == "localizador":
-            for coluna in df.columns:
-                serie = df[coluna].dropna().astype(str)
-                if serie.str.contains(r"\*[A-Za-z0-9]{6}", regex=True, na=False).any():
-                    return coluna
-
         if obrigatoria:
             raise ValueError(
-                f"Não consegui identificar a coluna de {finalidade}. "
-                f"Configure no .env. Colunas encontradas: {list(df.columns)}"
+                f"Não consegui identificar a coluna de {finalidade}. Colunas encontradas: {list(df.columns)}"
             )
-
         return None
 
     def _parse_decimal(self, value) -> Decimal | None:
         if value is None:
             return None
-
         texto = str(value).strip()
-
         if not texto or texto.lower() == "nan":
             return None
-
         texto = texto.replace("R$", "").replace(" ", "")
-
         if "," in texto and "." in texto:
             texto = texto.replace(".", "").replace(",", ".")
         elif "," in texto:
             texto = texto.replace(",", ".")
-
         texto = re.sub(r"[^0-9.-]", "", texto)
-
         if not texto:
             return None
-
         try:
             return Decimal(texto)
         except InvalidOperation:
@@ -235,19 +241,11 @@ class ExcelService:
 
     def _normalizar_texto(self, texto: str) -> str:
         return (
-            str(texto)
-            .strip()
-            .lower()
+            str(texto).strip().lower()
             .replace("ç", "c")
-            .replace("ã", "a")
-            .replace("á", "a")
-            .replace("à", "a")
-            .replace("â", "a")
-            .replace("é", "e")
-            .replace("ê", "e")
+            .replace("ã", "a").replace("á", "a").replace("à", "a").replace("â", "a")
+            .replace("é", "e").replace("ê", "e")
             .replace("í", "i")
-            .replace("ó", "o")
-            .replace("ô", "o")
-            .replace("õ", "o")
+            .replace("ó", "o").replace("ô", "o").replace("õ", "o")
             .replace("ú", "u")
         )
