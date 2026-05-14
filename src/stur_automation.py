@@ -439,25 +439,39 @@ class SturAutomation:
 
     def _obter_headers_grid(self) -> list[str]:
         frame = self._frame()
-        headers_locator = frame.locator("#c0_PH1_GridView1 th")
-        headers: list[str] = []
+        headers_locator = frame.locator("#c0_PH1_GridView1 tr").first.locator("th")
+
+        headers = []
 
         for i in range(headers_locator.count()):
-            texto = headers_locator.nth(i).inner_text().strip()
-            if texto:
-                headers.append(" ".join(texto.split()))
+            th = headers_locator.nth(i)
+
+            texto = th.inner_text().replace("\n", " ").strip()
+            colspan = th.get_attribute("colspan")
+
+            qtd_colunas = int(colspan) if colspan and colspan.isdigit() else 1
+
+            if not texto or texto == "\xa0":
+                texto = f"__COLUNA_VAZIA_{i}"
+
+            for indice in range(qtd_colunas):
+                if qtd_colunas > 1:
+                    headers.append(f"{texto}_{indice + 1}")
+                else:
+                    headers.append(texto)
 
         return headers
 
-    def _mapear_linha_por_headers(self, headers: list[str], valores: list[str]) -> dict[str, str]:
-        if len(headers) != len(valores):
-            self.logger.warning(
-                "Quantidade de headers (%s) diferente de células (%s). Headers=%s | Valores=%s",
-                len(headers), len(valores), headers, valores,
-            )
+    def _mapear_linha_por_headers(self, headers: list[str], valores: list[str]) -> dict:
+        dados = {}
 
-        limite = min(len(headers), len(valores))
-        return {headers[i]: valores[i] for i in range(limite)}
+        for index, valor in enumerate(valores):
+            if index < len(headers):
+                dados[headers[index]] = valor
+            else:
+                dados[f"__EXTRA_{index}"] = valor
+
+        return dados
 
     def _valor_coluna(self, dados: dict[str, str], nome_coluna: str) -> str | None:
         alvo = self._normalizar(nome_coluna)

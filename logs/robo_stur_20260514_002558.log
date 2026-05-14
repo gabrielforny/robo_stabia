@@ -1,0 +1,49 @@
+2026-05-14 00:25:58,369 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260514_002558.log
+2026-05-14 00:25:58,369 | INFO | robo_stur | Iniciando processamento: /Users/gabrielfornydesouzamuniz/Downloads/excel_stur.xlsx
+2026-05-14 00:25:58,556 | INFO | robo_stur | Aba carregada: Transações | Colunas: ['Unnamed: 0', 'Data da transação', 'Data de aprovação', 'Cartão', 'Usuario', 'Estabelecimento', 'Tipo de transação', 'Código de autorização', 'Valor em moeda estrangeira', 'Código da moeda estrangeira', 'Taxa de câmbio', 'Valor em R$', 'Parcela', 'IOF', 'VCN']
+2026-05-14 00:25:58,566 | INFO | robo_stur | Total de linhas a processar: 464
+2026-05-14 00:25:59,290 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-05-14 00:26:01,806 | INFO | robo_stur | Aguardando 3s — usuário preenchido
+2026-05-14 00:26:05,127 | INFO | robo_stur | Aguardando 3s — senha preenchida
+2026-05-14 00:26:09,827 | INFO | robo_stur | Aguardando 3s — login enviado
+2026-05-14 00:26:12,867 | WARNING | robo_stur | Sessão ativa detectada. Clicando em desbloquear usuário ativo...
+2026-05-14 00:26:13,210 | INFO | robo_stur | Aguardando 3s — usuário desbloqueado
+2026-05-14 00:26:16,215 | INFO | robo_stur | Login realizado.
+2026-05-14 00:26:16,216 | INFO | robo_stur | Acessando Operacional -> Vendas
+2026-05-14 00:26:16,593 | INFO | robo_stur | Aguardando 3s — hover no menu Operacional
+2026-05-14 00:26:19,955 | INFO | robo_stur | Aguardando 3s — tela de Vendas carregando
+2026-05-14 00:26:22,987 | INFO | robo_stur | Tela de Vendas pronta.
+2026-05-14 00:26:22,988 | INFO | robo_stur | ============================================================
+2026-05-14 00:26:22,988 | INFO | robo_stur | Linha Excel 2
+2026-05-14 00:26:22,988 | INFO | robo_stur | Tipo busca: LATAM
+2026-05-14 00:26:45,488 | INFO | robo_stur | Estabelecimento: ESTORNO DE LATAM DCP ND*DDBADK
+2026-05-14 00:26:45,488 | INFO | robo_stur | VCN: nan | Código Venda VCN: None
+2026-05-14 00:26:45,488 | INFO | robo_stur | Localizador extraído: DDBADK
+2026-05-14 00:26:45,488 | INFO | robo_stur | Termo: DDBADK | Coluna: Localizador
+2026-05-14 00:26:45,488 | INFO | robo_stur | Data STUR: 13/03/2026 | Valor Excel: -4748.32
+2026-05-14 00:26:45,489 | INFO | robo_stur | Estratégia LATAM: buscar Localizador=DDBADK
+2026-05-14 00:26:45,489 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-05-14 00:26:45,513 | WARNING | robo_stur | Botão Limpar/Cancelar filtro não encontrado. Limpando campo search manualmente.
+2026-05-14 00:26:45,825 | INFO | robo_stur | Aguardando 3s — campo search limpo manualmente
+2026-05-14 00:26:48,846 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-05-14 00:26:49,217 | INFO | robo_stur | Aguardando 3s — coluna Localizador selecionada
+2026-05-14 00:26:52,222 | INFO | robo_stur | Preenchendo search com: DDBADK
+2026-05-14 00:26:52,901 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-05-14 00:26:56,225 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-05-14 00:26:59,230 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-05-14 00:26:59,596 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-05-14 00:27:02,602 | INFO | robo_stur | Aguardando 3s — consulta por Localizador
+2026-05-14 00:28:34,732 | INFO | robo_stur | Validando resultados da tabela. Origem=Localizador
+2026-05-14 00:28:34,988 | INFO | robo_stur | Colunas detectadas: ['Ações_1', 'Ações_2', 'Ações_3', 'Ações_4', 'Ações_5', 'Ações_6', 'Ações_7', '__COLUNA_VAZIA_1', 'Venda', 'Situação', 'Cliente', 'CNPJ/CPF', 'Produto', 'Fornecedor', 'Fornecedor Serviço', 'CNPJ Fornecedor Serviço', 'Destino', 'Data de Emissão', 'Data de Confirmação', 'Emissor', 'Promotor', 'Coordenador', 'Auxiliar', 'Passageiro', 'Localizador', 'No. Confirmação', 'Seq. EBTA', 'Cód. Integração', 'File', 'C. de Custos Filial', 'Solicitante', 'Filial', 'C. de Custos Cliente', 'Setor Cliente', 'Projeto', 'Autorizador', 'Atividade', 'Total Cliente', 'Total Fornecedor', 'Número Pré-Venda', 'Id RM', 'Status Exp. RM', 'Tipo Cliente', 'Comis.AGT. Viagem', 'Grupo Cliente', 'Integração']
+2026-05-14 00:29:12,724 | INFO | robo_stur | Candidato coletado | Venda=00026066 | Fornecedor=LATAM | Forn.Serviço=LATAM | Emissão=13/03/2026 | Início=None | Término=None | TotalCliente=4774.72 | TotalFornecedor=4748.32
+2026-05-14 00:29:12,726 | INFO | robo_stur | Total de candidatos coletados: 1
+2026-05-14 00:30:27,024 | INFO | robo_stur | Validando candidatos com valor exato. Valor Excel=-4748.32
+2026-05-14 00:30:27,025 | INFO | robo_stur | Analisando candidato | Venda=00026066 | TotalFornecedor=4748.32 | TotalCliente=4774.72 | Origem=Localizador
+2026-05-14 00:30:27,026 | INFO | robo_stur | Candidato EXATO aprovado. Venda=00026066
+2026-05-14 00:30:50,691 | INFO | robo_stur | Venda validada para próxima etapa. Venda=00026066 | Origem=Localizador
+2026-05-14 00:30:50,691 | INFO | robo_stur | Aguardando 3s — fim da validação da venda
+2026-05-14 00:31:16,258 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-05-14 00:31:16,632 | INFO | robo_stur | Aguardando 3s — limpar filtros clicado
+2026-05-14 00:31:33,602 | INFO | robo_stur | ============================================================
+2026-05-14 00:31:33,603 | INFO | robo_stur | Linha Excel 3
+2026-05-14 00:31:33,603 | INFO | robo_stur | Tipo busca: GENERICO
