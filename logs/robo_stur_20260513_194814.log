@@ -1,0 +1,18 @@
+2026-05-13 19:48:14,649 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260513_194814.log
+2026-05-13 19:48:14,649 | INFO | robo_stur | Iniciando processamento: /Users/gabrielfornydesouzamuniz/Downloads/2026-04-15_000000000455_d8266ce4caa4.xlsx
+2026-05-13 19:48:14,911 | INFO | robo_stur | Aba carregada: Transações | Colunas: ['Unnamed: 0', 'Data da transação', 'Data de aprovação', 'Cartão', 'Usuario', 'Estabelecimento', 'Tipo de transação', 'Código de autorização', 'Valor em moeda estrangeira', 'Código da moeda estrangeira', 'Taxa de câmbio', 'Valor em R$', 'Parcela', 'IOF', 'VCN']
+2026-05-13 19:48:14,921 | INFO | robo_stur | Total de linhas a processar: 469
+2026-05-13 19:48:15,590 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-05-13 19:48:17,985 | INFO | robo_stur | Aguardando 3s — usuário preenchido
+2026-05-13 19:48:21,306 | INFO | robo_stur | Aguardando 3s — senha preenchida
+2026-05-13 19:48:25,161 | INFO | robo_stur | Aguardando 3s — login enviado
+2026-05-13 19:48:28,201 | WARNING | robo_stur | Sessão ativa detectada. Clicando em desbloquear usuário ativo...
+2026-05-13 19:48:28,534 | INFO | robo_stur | Aguardando 3s — usuário desbloqueado
+2026-05-13 19:48:31,539 | INFO | robo_stur | Login realizado.
+2026-05-13 19:48:31,540 | INFO | robo_stur | Acessando Operacional -> Vendas
+2026-05-13 19:48:31,900 | INFO | robo_stur | Aguardando 3s — hover no menu Operacional
+2026-05-13 19:48:35,248 | INFO | robo_stur | Aguardando 3s — tela de Vendas carregando
+2026-05-13 19:48:38,278 | INFO | robo_stur | Tela de Vendas pronta.
+2026-05-13 19:48:38,278 | INFO | robo_stur | ============================================================
+2026-05-13 19:48:38,278 | INFO | robo_stur | Linha Excel 2
+2026-05-13 19:48:38,278 | INFO | robo_stur | Tipo busca: GENERICO

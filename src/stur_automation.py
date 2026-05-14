@@ -131,35 +131,90 @@ class SturAutomation:
 
     def buscar_generico_por_datas(self, transacao: Transacao) -> list[CandidatoVenda]:
         """
-        Estratégia da reunião para hotéis/fornecedores genéricos:
-        tenta combinações controladas, uma por vez, sem encavalar:
-        - Fornecedor + Data de Emissão
-        - Fornecedor Serviço + Data de Emissão
-        - Fornecedor + Data de Início
-        - Fornecedor Serviço + Data de Início
-        - Fornecedor + Data de Término
-        - Fornecedor Serviço + Data de Término
+        Estratégia otimizada para hotéis/fornecedores genéricos.
+
+        Regra importante:
+        - Primeiro pesquisa SOMENTE pelo fornecedor/fornecedor serviço.
+        - Se essa primeira busca não trouxer nenhuma linha, NÃO aplica data.
+          Já considera que não há base para refinar e segue para o próximo item.
+        - Só marca "Manter Pesquisa" e aplica Data de Emissão/Início/Término
+          quando a busca inicial trouxe candidatos.
+
+        Isso evita gastar tempo em casos como AdaptaOrg, Uber, lanchonete etc.,
+        que não existem no STUR como venda/importação.
         """
-        colunas_fornecedor = ["Fornecedor", "Fornecedor Serviço"]
+        buscas_iniciais: list[tuple[str, str]] = [
+            ("Fornecedor", transacao.termo_busca),
+            ("Fornecedor Serviço", transacao.termo_busca),
+        ]
+
+        if transacao.tipo_busca == "GENERICO_COM_LOCALIZADOR" and transacao.localizador_extraido:
+            buscas_iniciais.append(("Localizador", transacao.localizador_extraido))
+
         colunas_data = ["Data de Emissão", "Data de Início", "Data de Término"]
         todos: list[CandidatoVenda] = []
 
-        for coluna_data in colunas_data:
-            for coluna_fornecedor in colunas_fornecedor:
+        for coluna_busca, termo_busca in buscas_iniciais:
+            self.logger.info(
+                "Estratégia %s — busca inicial: %s='%s'",
+                transacao.tipo_busca,
+                coluna_busca,
+                termo_busca,
+            )
+
+            self.limpar_filtros_com_calma()
+
+            self.clicar_coluna(coluna_busca)
+            self.preencher_search(termo_busca)
+            self.clicar_botao_pesquisar()
+            self.esperar(f"consulta inicial por {coluna_busca}")
+
+            candidatos_iniciais = self.coletar_resultados_da_tabela(
+                origem_busca=f"{coluna_busca} sem data"
+            )
+
+            if not candidatos_iniciais:
                 self.logger.info(
-                    "Estratégia GENERICO: %s='%s' + %s='%s'",
-                    coluna_fornecedor,
-                    transacao.termo_busca,
+                    "Nenhum resultado inicial para %s='%s'. Não vou aplicar filtro de data para este campo.",
+                    coluna_busca,
+                    termo_busca,
+                )
+                continue
+
+            self.logger.info(
+                "Busca inicial em %s encontrou %s candidato(s). Agora vou refinar por data.",
+                coluna_busca,
+                len(candidatos_iniciais),
+            )
+
+            for coluna_data in colunas_data:
+                self.logger.info(
+                    "Estratégia GENERICO — refinando: %s='%s' + %s='%s'",
+                    coluna_busca,
+                    termo_busca,
                     coluna_data,
                     transacao.data_stur,
                 )
 
+                # Recomeça a combinação do zero para não empilhar Data de Emissão + Início + Término.
                 self.limpar_filtros_com_calma()
 
-                self.clicar_coluna(coluna_fornecedor)
-                self.preencher_search(transacao.termo_busca)
+                self.clicar_coluna(coluna_busca)
+                self.preencher_search(termo_busca)
                 self.clicar_botao_pesquisar()
-                self.esperar(f"consulta por {coluna_fornecedor}")
+                self.esperar(f"consulta por {coluna_busca} antes de manter pesquisa")
+
+                # Confirma de novo se ainda há resultado antes de manter pesquisa/data.
+                candidatos_base = self.coletar_resultados_da_tabela(
+                    origem_busca=f"{coluna_busca} base antes de {coluna_data}"
+                )
+                if not candidatos_base:
+                    self.logger.info(
+                        "A busca base deixou de retornar resultados para %s. Pulando refinamento por %s.",
+                        coluna_busca,
+                        coluna_data,
+                    )
+                    continue
 
                 self.clicar_manter_pesquisa()
                 self.clicar_coluna(coluna_data)
@@ -168,14 +223,14 @@ class SturAutomation:
                 self.esperar(f"consulta complementar por {coluna_data}")
 
                 candidatos = self.coletar_resultados_da_tabela(
-                    origem_busca=f"{coluna_fornecedor} + {coluna_data}"
+                    origem_busca=f"{coluna_busca} + {coluna_data}"
                 )
 
                 if candidatos:
                     self.logger.info("Foram encontrados %s candidato(s) nessa estratégia.", len(candidatos))
                     todos.extend(candidatos)
                 else:
-                    self.logger.info("Nenhum candidato nessa estratégia.")
+                    self.logger.info("Nenhum candidato nessa estratégia refinada.")
 
         self.limpar_filtros_com_calma()
         return todos

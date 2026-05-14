@@ -93,6 +93,7 @@ def processar_transacao(
     logger.info("Tipo busca: %s", transacao.tipo_busca)
     logger.info("Estabelecimento: %s", transacao.estabelecimento)
     logger.info("VCN: %s | Código Venda VCN: %s", transacao.vcn, transacao.codigo_venda_vcn)
+    logger.info("Localizador extraído: %s", transacao.localizador_extraido)
     logger.info("Termo: %s | Coluna: %s", transacao.termo_busca, transacao.coluna_busca)
     logger.info("Data STUR: %s | Valor Excel: %s", transacao.data_stur, transacao.valor_excel)
 
@@ -100,7 +101,7 @@ def processar_transacao(
         excel_service.escrever_resultado(df, transacao, "LANÇAMENTO MANUAL | Sem termo de busca")
         return False
 
-    if transacao.tipo_busca in {"GENERICO"} and not transacao.data_stur:
+    if transacao.tipo_busca in {"GENERICO", "GENERICO_COM_LOCALIZADOR"} and not transacao.data_stur:
         excel_service.escrever_resultado(df, transacao, "LANÇAMENTO MANUAL | Sem data para consultar")
         return False
 

@@ -13,9 +13,10 @@ class Transacao:
     valor_excel: Decimal | None
     vcn: str
     codigo_venda_vcn: str | None
+    localizador_extraido: str | None
     termo_busca: str
     coluna_busca: str
-    tipo_busca: str  # VCN, LATAM, GENERICO
+    tipo_busca: str  # VCN, LATAM, GENERICO, GENERICO_COM_LOCALIZADOR
 
 
 @dataclass(slots=True)

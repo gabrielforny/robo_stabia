@@ -1,0 +1,67 @@
+2026-05-13 23:39:45,307 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260513_233945.log
+2026-05-13 23:39:45,308 | INFO | robo_stur | Iniciando processamento: /Users/gabrielfornydesouzamuniz/Downloads/excel_stur.xlsx
+2026-05-13 23:39:45,501 | INFO | robo_stur | Aba carregada: Transações | Colunas: ['Unnamed: 0', 'Data da transação', 'Data de aprovação', 'Cartão', 'Usuario', 'Estabelecimento', 'Tipo de transação', 'Código de autorização', 'Valor em moeda estrangeira', 'Código da moeda estrangeira', 'Taxa de câmbio', 'Valor em R$', 'Parcela', 'IOF', 'VCN']
+2026-05-13 23:39:45,511 | INFO | robo_stur | Total de linhas a processar: 464
+2026-05-13 23:39:46,256 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-05-13 23:40:03,856 | INFO | robo_stur | Aguardando 3s — usuário preenchido
+2026-05-13 23:40:07,176 | INFO | robo_stur | Aguardando 3s — senha preenchida
+2026-05-13 23:40:11,779 | INFO | robo_stur | Aguardando 3s — login enviado
+2026-05-13 23:40:17,787 | INFO | robo_stur | Login realizado.
+2026-05-13 23:40:17,787 | INFO | robo_stur | Acessando Operacional -> Vendas
+2026-05-13 23:40:18,146 | INFO | robo_stur | Aguardando 3s — hover no menu Operacional
+2026-05-13 23:40:21,515 | INFO | robo_stur | Aguardando 3s — tela de Vendas carregando
+2026-05-13 23:40:25,354 | INFO | robo_stur | Tela de Vendas pronta.
+2026-05-13 23:40:25,354 | INFO | robo_stur | ============================================================
+2026-05-13 23:40:25,354 | INFO | robo_stur | Linha Excel 2
+2026-05-13 23:40:25,354 | INFO | robo_stur | Tipo busca: LATAM
+2026-05-13 23:41:50,121 | INFO | robo_stur | Estabelecimento: ESTORNO DE LATAM DCP ND*DDBADK
+2026-05-13 23:41:50,121 | INFO | robo_stur | VCN: nan | Código Venda VCN: None
+2026-05-13 23:41:50,122 | INFO | robo_stur | Localizador extraído: DDBADK
+2026-05-13 23:41:50,122 | INFO | robo_stur | Termo: DDBADK | Coluna: Localizador
+2026-05-13 23:41:50,122 | INFO | robo_stur | Data STUR: 13/03/2026 | Valor Excel: -4748.32
+2026-05-13 23:41:50,122 | INFO | robo_stur | Estratégia LATAM: buscar Localizador=DDBADK
+2026-05-13 23:41:50,123 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-05-13 23:41:50,152 | WARNING | robo_stur | Botão Limpar/Cancelar filtro não encontrado. Limpando campo search manualmente.
+2026-05-13 23:41:50,467 | INFO | robo_stur | Aguardando 3s — campo search limpo manualmente
+2026-05-13 23:41:53,481 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-05-13 23:41:53,898 | INFO | robo_stur | Aguardando 3s — coluna Localizador selecionada
+2026-05-13 23:41:56,904 | INFO | robo_stur | Preenchendo search com: DDBADK
+2026-05-13 23:41:57,589 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-05-13 23:42:00,907 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-05-13 23:42:03,912 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-05-13 23:42:04,270 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-05-13 23:42:07,274 | INFO | robo_stur | Aguardando 3s — consulta por Localizador
+2026-05-13 23:42:10,279 | INFO | robo_stur | Validando resultados da tabela. Origem=Localizador
+2026-05-13 23:42:10,398 | INFO | robo_stur | Colunas detectadas: ['Ações', 'Venda', 'Situação', 'Cliente', 'CNPJ/CPF', 'Produto', 'Fornecedor', 'Fornecedor Serviço', 'CNPJ Fornecedor Serviço', 'Destino', 'Data de Emissão', 'Data de Confirmação', 'Emissor', 'Promotor', 'Coordenador', 'Auxiliar', 'Passageiro', 'Localizador', 'No. Confirmação', 'Seq. EBTA', 'Cód. Integração', 'File', 'C. de Custos Filial', 'Solicitante', 'Filial', 'C. de Custos Cliente', 'Setor Cliente', 'Projeto', 'Autorizador', 'Atividade', 'Total Cliente', 'Total Fornecedor', 'Número Pré-Venda', 'Id RM', 'Status Exp. RM', 'Tipo Cliente', 'Comis.AGT. Viagem', 'Grupo Cliente', 'Integração']
+2026-05-13 23:42:10,500 | WARNING | robo_stur | Quantidade de headers (39) diferente de células (46). Headers=['Ações', 'Venda', 'Situação', 'Cliente', 'CNPJ/CPF', 'Produto', 'Fornecedor', 'Fornecedor Serviço', 'CNPJ Fornecedor Serviço', 'Destino', 'Data de Emissão', 'Data de Confirmação', 'Emissor', 'Promotor', 'Coordenador', 'Auxiliar', 'Passageiro', 'Localizador', 'No. Confirmação', 'Seq. EBTA', 'Cód. Integração', 'File', 'C. de Custos Filial', 'Solicitante', 'Filial', 'C. de Custos Cliente', 'Setor Cliente', 'Projeto', 'Autorizador', 'Atividade', 'Total Cliente', 'Total Fornecedor', 'Número Pré-Venda', 'Id RM', 'Status Exp. RM', 'Tipo Cliente', 'Comis.AGT. Viagem', 'Grupo Cliente', 'Integração'] | Valores=['', '', '', '', '', '', '', '', '00026066', '', 'SP - MACHADO MEYER SENDACZ E OPICE', '45.762.077/0001-37', 'ETICKET NACIONAL', 'LATAM', 'LATAM', '33.937.681/0001-78', '', '13/03/2026', '13/03/2026', 'ALEXANDRE SILVEIRA LUIZA', 'SERAFIM OLIVEIRA', 'KARINA PORTO OWSIANY ANTONIEVICZ', '', 'GEOVANNA VILA', 'DDBADK', '', '0', 'ID Venda: 00691/7939-1', '', 'CORPORATIVO', 'PATRICIA SANTOS FELCAR', 'STABIA', '004260/001142', '', '', 'GEOVANNA VILA', '', '4.774,72', '4.748,32', '', '0', '', 'PADRÃO', '', 'MACHADO MEYER', 'Importacao: argo mmSistema: TMS V4']
+2026-05-13 23:42:10,500 | INFO | robo_stur | Candidato coletado | Venda= | Fornecedor= | Forn.Serviço= | Emissão=SP - MACHADO MEYER SENDACZ E OPICE | Início=None | Término=None | TotalCliente=None | TotalFornecedor=None
+2026-05-13 23:42:10,500 | INFO | robo_stur | Total de candidatos coletados: 1
+2026-05-13 23:42:10,500 | INFO | robo_stur | Validando candidatos com valor exato. Valor Excel=-4748.32
+2026-05-13 23:42:10,500 | INFO | robo_stur | Analisando candidato | Venda= | TotalFornecedor=None | TotalCliente=None | Origem=Localizador
+2026-05-13 23:42:10,500 | INFO | robo_stur | Nenhum candidato exato encontrado.
+2026-05-13 23:42:10,501 | WARNING | robo_stur | ERRO | Encontrou candidatos, mas nenhum valor bate/proxima: Venda - (Localizador; Forn=None; Cliente=None)
+2026-05-13 23:42:10,501 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-05-13 23:42:10,814 | INFO | robo_stur | Aguardando 3s — limpar filtros clicado
+2026-05-13 23:42:13,845 | INFO | robo_stur | ============================================================
+2026-05-13 23:42:13,845 | INFO | robo_stur | Linha Excel 3
+2026-05-13 23:42:13,845 | INFO | robo_stur | Tipo busca: GENERICO
+2026-05-14 00:06:51,406 | INFO | robo_stur | Estabelecimento: HOTEL RECANTO DO MAR
+2026-05-14 00:06:51,408 | INFO | robo_stur | VCN: nan | Código Venda VCN: None
+2026-05-14 00:06:51,408 | INFO | robo_stur | Localizador extraído: None
+2026-05-14 00:06:51,408 | INFO | robo_stur | Termo: HOTEL RECANTO DO MAR | Coluna: Fornecedor
+2026-05-14 00:06:51,408 | INFO | robo_stur | Data STUR: 16/03/2026 | Valor Excel: 750
+2026-05-14 00:06:51,409 | INFO | robo_stur | Estratégia GENERICO — busca inicial: Fornecedor='HOTEL RECANTO DO MAR'
+2026-05-14 00:06:51,409 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-05-14 00:06:51,758 | INFO | robo_stur | Aguardando 3s — limpar filtros clicado
+2026-05-14 00:06:54,789 | INFO | robo_stur | Clicando na coluna: Fornecedor
+2026-05-14 00:06:55,145 | INFO | robo_stur | Aguardando 3s — coluna Fornecedor selecionada
+2026-05-14 00:06:58,151 | INFO | robo_stur | Preenchendo search com: HOTEL RECANTO DO MAR
+2026-05-14 00:06:58,841 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-05-14 00:07:02,162 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-05-14 00:07:05,165 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-05-14 00:07:05,531 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-05-14 00:07:08,536 | INFO | robo_stur | Aguardando 3s — consulta inicial por Fornecedor
+2026-05-14 00:07:54,114 | INFO | robo_stur | Validando resultados da tabela. Origem=Fornecedor sem data
+2026-05-14 00:08:07,397 | INFO | robo_stur | Colunas detectadas: ['Ações', 'Venda', 'Situação', 'Cliente', 'CNPJ/CPF', 'Produto', 'Fornecedor', 'Fornecedor Serviço', 'CNPJ Fornecedor Serviço', 'Destino', 'Data de Emissão', 'Data de Confirmação', 'Emissor', 'Promotor', 'Coordenador', 'Auxiliar', 'Passageiro', 'Localizador', 'No. Confirmação', 'Seq. EBTA', 'Cód. Integração', 'File', 'C. de Custos Filial', 'Solicitante', 'Filial', 'C. de Custos Cliente', 'Setor Cliente', 'Projeto', 'Autorizador', 'Atividade', 'Total Cliente', 'Total Fornecedor', 'Número Pré-Venda', 'Id RM', 'Status Exp. RM', 'Tipo Cliente', 'Comis.AGT. Viagem', 'Grupo Cliente', 'Integração']
+2026-05-14 00:08:39,780 | WARNING | robo_stur | Quantidade de headers (39) diferente de células (46). Headers=['Ações', 'Venda', 'Situação', 'Cliente', 'CNPJ/CPF', 'Produto', 'Fornecedor', 'Fornecedor Serviço', 'CNPJ Fornecedor Serviço', 'Destino', 'Data de Emissão', 'Data de Confirmação', 'Emissor', 'Promotor', 'Coordenador', 'Auxiliar', 'Passageiro', 'Localizador', 'No. Confirmação', 'Seq. EBTA', 'Cód. Integração', 'File', 'C. de Custos Filial', 'Solicitante', 'Filial', 'C. de Custos Cliente', 'Setor Cliente', 'Projeto', 'Autorizador', 'Atividade', 'Total Cliente', 'Total Fornecedor', 'Número Pré-Venda', 'Id RM', 'Status Exp. RM', 'Tipo Cliente', 'Comis.AGT. Viagem', 'Grupo Cliente', 'Integração'] | Valores=['', '', '', '', '', '', '', '', '00028197', '', 'EXAL ADMINISTRACAO DE RESTAURANTES EMPRESARIAIS LTDA', '75.584.110/0001-47', 'HOTELARIA NACIONAL', 'HOTEL RECANTO DO MAR', 'HOTEL RECANTO DO MAR', '26.334.635/0001-19', '', '08/04/2026', '09/04/2026', 'ANA PAULA NOWAK BUTTNER', 'FABIO ANTUNUNCIO', 'KARINA PORTO OWSIANY ANTONIEVICZ', '', 'BRUNA SILVA MONTEIRO', '', '', '0', 'ID Venda: 898/7249-1', '', 'CORPORATIVO', 'REJANE POLO', 'STABIA', 'LEAR DO BRASIL - CACAPAVA', '', '52-LEAR CACAPAVA', 'GRACIELLE SANTO', '', '1.250,00', '1.125,00', '', '0', '', 'PADRÃO', '', 'PADRAO', 'Importacao: argoSistema: TMS V4']
+2026-05-14 00:14:13,906 | INFO | robo_stur | Candidato coletado | Venda= | Fornecedor= | Forn.Serviço= | Emissão=EXAL ADMINISTRACAO DE RESTAURANTES EMPRESARIAIS LTDA | Início=None | Término=None | TotalCliente=None | TotalFornecedor=None

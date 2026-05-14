@@ -27,7 +27,7 @@ Versão refatorada para fluxo lento, auditável e com funções mais diretas.
 ## Como rodar
 
 ```bash
-python3 src/main.py --arquivo input/2026-04-15_000000000455_d8266ce4caa4.xlsx
+python3 src/main.py --arquivo input/excel_stur.xlsx
 ```
 
 Ou sem parâmetro, pegando o Excel/CSV mais recente da pasta Downloads:
@@ -41,3 +41,52 @@ python3 src/main.py
 - O robô aguarda 3 segundos entre os passos principais para evitar consulta encavalada.
 - A etapa final de alteração/pagamento do fornecedor ainda está segura/conservadora: apenas loga a venda validada. Quando houver fatura aberta para teste real, implementar os campos finais em `seguir_fluxo_venda_ok`.
 - O parsing de Total Fornecedor/Total Cliente foi protegido para não confundir CNPJ/CPF com valor monetário.
+
+
+## Ajuste desta versão
+
+A busca genérica foi otimizada para não aplicar filtro de data quando a primeira busca por Fornecedor/Fornecedor Serviço não retorna nenhum resultado.
+
+Fluxo atual para genéricos:
+
+1. Limpa filtros.
+2. Clica em Fornecedor ou Fornecedor Serviço.
+3. Pesquisa o estabelecimento.
+4. Se não vier resultado, não marca Manter Pesquisa e não pesquisa data.
+5. Se vier resultado, aí sim marca Manter Pesquisa e testa Data de Emissão, Data de Início e Data de Término.
+
+
+## Ajuste desta versão
+
+Na busca genérica, o robô agora tenta a busca inicial em:
+
+1. Fornecedor
+2. Fornecedor Serviço
+3. Localizador
+
+Somente se uma dessas buscas iniciais retornar resultado, ele marca "Manter Pesquisa" e refina por:
+
+- Data de Emissão
+- Data de Início
+- Data de Término
+
+Se não houver resultado inicial em nenhuma das três colunas, ele marca como não localizado/manual e segue para o próximo item.
+
+
+## Ajuste desta versão - regra do asterisco
+
+Regra aplicada:
+
+- Se o estabelecimento tiver `*` e for LATAM:
+  - busca direto pelo código após `*` na coluna `Localizador`;
+  - não tenta Fornecedor/Fornecedor Serviço.
+
+- Se o estabelecimento tiver `*` e NÃO for LATAM:
+  - busca por `Fornecedor` usando o estabelecimento completo;
+  - busca por `Fornecedor Serviço` usando o estabelecimento completo;
+  - busca por `Localizador` usando somente o código extraído após `*`.
+
+- Se não tiver `*`:
+  - busca apenas por `Fornecedor` e `Fornecedor Serviço`.
+
+Em todos os casos genéricos, o robô só aplica filtro de data se a busca inicial retornar alguma linha.

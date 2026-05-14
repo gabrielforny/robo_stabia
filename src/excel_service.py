@@ -79,7 +79,12 @@ class ExcelService:
             vcn = str(row.get(coluna_vcn, "") or "").strip() if coluna_vcn else ""
 
             codigo_venda_vcn = self._extrair_codigo_venda_vcn(vcn)
-            termo_busca, coluna_busca, tipo_busca = self._definir_estrategia_busca(estabelecimento, codigo_venda_vcn)
+            localizador_extraido = self._extrair_localizador_apos_asterisco(estabelecimento)
+            termo_busca, coluna_busca, tipo_busca = self._definir_estrategia_busca(
+                estabelecimento=estabelecimento,
+                codigo_venda_vcn=codigo_venda_vcn,
+                localizador_extraido=localizador_extraido,
+            )
 
             transacoes.append(
                 Transacao(
@@ -91,6 +96,7 @@ class ExcelService:
                     valor_excel=valor_excel,
                     vcn=vcn,
                     codigo_venda_vcn=codigo_venda_vcn,
+                    localizador_extraido=localizador_extraido,
                     termo_busca=termo_busca,
                     coluna_busca=coluna_busca,
                     tipo_busca=tipo_busca,
@@ -129,16 +135,43 @@ class ExcelService:
 
         return f"Total a pagar localizado na primeira aba: {total_a_pagar}"
 
-    def _definir_estrategia_busca(self, estabelecimento: str, codigo_venda_vcn: str | None) -> tuple[str, str, str]:
+    def _definir_estrategia_busca(
+        self,
+        estabelecimento: str,
+        codigo_venda_vcn: str | None,
+        localizador_extraido: str | None,
+    ) -> tuple[str, str, str]:
+        """
+        Define a primeira estratégia da linha.
+
+        Regras:
+        - Se o VCN trouxer venda, busca direto por Venda.
+        - Se for LATAM e tiver '*', busca direto pelo Localizador extraído.
+        - Se NÃO for LATAM, mas tiver '*', mantém o estabelecimento como termo principal,
+          porém sinaliza que também deve tentar o Localizador extraído.
+        - Se não tiver '*', fluxo genérico normal.
+        """
         if codigo_venda_vcn:
             return codigo_venda_vcn, "Venda", "VCN"
 
-        if "latam" in estabelecimento.lower():
-            match = re.search(r"\*\s*([A-Za-z0-9]{6})", estabelecimento)
-            if match:
-                return match.group(1).upper(), "Localizador", "LATAM"
+        if localizador_extraido and "latam" in estabelecimento.lower():
+            return localizador_extraido, "Localizador", "LATAM"
+
+        if localizador_extraido:
+            return estabelecimento, "Fornecedor", "GENERICO_COM_LOCALIZADOR"
 
         return estabelecimento, "Fornecedor", "GENERICO"
+
+    def _extrair_localizador_apos_asterisco(self, estabelecimento: str) -> str | None:
+        texto = str(estabelecimento or "").strip()
+        if "*" not in texto:
+            return None
+
+        match = re.search(r"\*\s*([A-Za-z0-9]{6})", texto)
+        if not match:
+            return None
+
+        return match.group(1).upper()
 
     def _extrair_codigo_venda_vcn(self, vcn: str) -> str | None:
         """
