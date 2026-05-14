@@ -30,6 +30,19 @@ SELECTORS = {
     "limpar_filtros": "#c0_PH1_UsrCabecLista1_ImgCancelarFiltro",
     "grid": "#c0_PH1_GridView1",
     "linhas_grid": "#c0_PH1_GridView1 tbody tr",
+
+    # Tela de edição da venda / pagamento fornecedor
+    "editar_venda_linha": "#c0_PH1_GridView1 tbody tr input[id*='ImgEditar']",
+    "grid_pagamentos_fornecedor": "#c0_PH1_UFRPV1_GrdP",
+    "editar_pagamento_fornecedor": "#c0_PH1_UFRPV1_GrdP input[id*='ImgEditar']",
+    "modal_forma_pagamento": "#c0_PH1_UFRPV1_PnlFormaPag",
+    "radio_cartao_credito_agencia": "#c0_PH1_UFRPV1_RblFormaPag_2",
+    "select_titular_cartao_agencia": "#c0_PH1_UFRPV1_UTCCRAG_Dbl",
+    "select_numero_cartao_agencia": "#c0_PH1_UFRPV1_UCCRAG_Dbl",
+    "data_vencimento_cartao_agencia": "#c0_PH1_UFRPV1_UPCCDV_Edt",
+    "botao_ok_pagamento": "#c0_PH1_UFRPV1_BtnOKPag",
+    "botao_gravar_venda": "#c0_PH1_URE1_BtnGravar",
+    "botao_voltar_venda": "#c0_PH1_URE1_BtnCancelar",
 }
 
 ESPERA_SEGUNDOS = 3
@@ -368,6 +381,7 @@ class SturAutomation:
             dados = self._mapear_linha_por_headers(headers, valores)
 
             candidato = CandidatoVenda(
+                indice_tabela=i,
                 codigo_venda=self._valor_coluna(dados, "Venda"),
                 data_emissao=self._valor_coluna(dados, "Data de Emissão"),
                 data_inicio=self._valor_coluna(dados, "Data de Início"),
@@ -398,23 +412,116 @@ class SturAutomation:
         self.logger.info("Total de candidatos coletados: %s", len(candidatos))
         return candidatos
 
-    def seguir_fluxo_venda_ok(self, candidato: CandidatoVenda) -> None:
+    def seguir_fluxo_venda_ok(self, candidato: CandidatoVenda, data_vencimento: str | None) -> None:
         """
-        Base para a etapa final. Mantive conservador para não alterar venda errada.
-        Quando validarmos com fatura aberta, aqui entram:
-        - abrir primeiro ícone
-        - pagamento do fornecedor
-        - editar
-        - forma pagamento/cartão/data
-        - OK
-        - GRAVAR
+        Fluxo executado somente quando a venda foi encontrada com valor confiável.
+
+        Passos:
+        - abrir o ícone Editar da linha encontrada na listagem;
+        - editar o primeiro pagamento do fornecedor;
+        - selecionar Cartão de Crédito Agência;
+        - selecionar Fabio Antununcio - CARTÃO DIGITAL;
+        - preencher Data de Vencimento da aba Capa;
+        - clicar OK;
+        - clicar Gravar;
+        - clicar Voltar para retornar à listagem.
         """
+        if not data_vencimento:
+            raise ValueError("Data de vencimento da aba Capa não encontrada. Não vou alterar pagamento da venda.")
+
         self.logger.info(
-            "Venda validada para próxima etapa. Venda=%s | Origem=%s",
+            "Venda validada. Iniciando alteração de pagamento | Venda=%s | Linha tabela=%s | Vencimento=%s",
             candidato.codigo_venda,
-            candidato.origem_busca,
+            candidato.indice_tabela,
+            data_vencimento,
         )
-        self.esperar("fim da validação da venda")
+
+        self.abrir_edicao_venda(candidato)
+        self.editar_primeiro_pagamento_fornecedor()
+        self.preencher_pagamento_cartao_agencia(data_vencimento)
+        self.gravar_venda_e_voltar()
+
+    def abrir_edicao_venda(self, candidato: CandidatoVenda) -> None:
+        frame = self._frame()
+        self.logger.info("Abrindo edição da venda na linha da tabela: %s", candidato.indice_tabela)
+
+        linhas = frame.locator(SELECTORS["linhas_grid"])
+        linha = linhas.nth(candidato.indice_tabela)
+        botao_editar = linha.locator("input[id*='ImgEditar']").first
+
+        botao_editar.wait_for(state="visible", timeout=20000)
+        botao_editar.click(force=True)
+
+        self.esperar("abrir tela de edição da venda")
+        frame.locator(SELECTORS["botao_gravar_venda"]).first.wait_for(state="visible", timeout=30000)
+        self.logger.info("Tela de edição da venda carregada.")
+
+    def editar_primeiro_pagamento_fornecedor(self) -> None:
+        frame = self._frame()
+        self.logger.info("Abrindo edição do primeiro pagamento do fornecedor.")
+
+        grid_pagamentos = frame.locator(SELECTORS["grid_pagamentos_fornecedor"]).first
+        grid_pagamentos.wait_for(state="visible", timeout=30000)
+
+        botao_editar_pagamento = frame.locator(SELECTORS["editar_pagamento_fornecedor"]).first
+        botao_editar_pagamento.wait_for(state="visible", timeout=20000)
+        botao_editar_pagamento.click(force=True)
+
+        self.esperar("abrir modal de pagamento do fornecedor")
+        frame.locator(SELECTORS["modal_forma_pagamento"]).first.wait_for(state="visible", timeout=20000)
+        self.logger.info("Modal de pagamento do fornecedor aberto.")
+
+    def preencher_pagamento_cartao_agencia(self, data_vencimento: str) -> None:
+        frame = self._frame()
+
+        self.logger.info("Selecionando forma de pagamento: Cartão de Crédito Agência.")
+        radio_cartao = frame.locator(SELECTORS["radio_cartao_credito_agencia"]).first
+        radio_cartao.wait_for(state="visible", timeout=20000)
+        radio_cartao.click(force=True)
+        self.esperar("forma Cartão de Crédito Agência selecionada")
+
+        self.logger.info("Selecionando titular: Fabio Antununcio - CARTÃO DIGITAL.")
+        select_titular = frame.locator(SELECTORS["select_titular_cartao_agencia"]).first
+        select_titular.wait_for(state="visible", timeout=20000)
+        select_titular.select_option("29")
+        self.esperar("titular do cartão selecionado")
+
+        # Em geral o STUR sincroniza o número do cartão ao selecionar o titular.
+        # Mantemos este fallback para garantir que o número correspondente também esteja selecionado.
+        try:
+            select_numero_cartao = frame.locator(SELECTORS["select_numero_cartao_agencia"]).first
+            if select_numero_cartao.count() > 0:
+                select_numero_cartao.select_option("29")
+                self.esperar("número do cartão sincronizado")
+        except Exception as exc:
+            self.logger.warning("Não consegui sincronizar select do número do cartão. Seguindo. Detalhe: %s", exc)
+
+        self.logger.info("Preenchendo vencimento do cartão: %s", data_vencimento)
+        campo_vencimento = frame.locator(SELECTORS["data_vencimento_cartao_agencia"]).first
+        campo_vencimento.wait_for(state="visible", timeout=20000)
+        campo_vencimento.click()
+        campo_vencimento.fill("")
+        campo_vencimento.fill(data_vencimento)
+        self.esperar("data de vencimento preenchida")
+
+        self.logger.info("Confirmando modal de pagamento no botão OK.")
+        frame.locator(SELECTORS["botao_ok_pagamento"]).first.click(force=True)
+        self.esperar("OK do pagamento clicado")
+
+    def gravar_venda_e_voltar(self) -> None:
+        frame = self._frame()
+
+        self.logger.info("Gravando venda.")
+        frame.locator(SELECTORS["botao_gravar_venda"]).first.wait_for(state="visible", timeout=20000)
+        frame.locator(SELECTORS["botao_gravar_venda"]).first.click(force=True)
+        self.esperar("venda gravada")
+
+        self.logger.info("Voltando para a listagem de vendas.")
+        frame.locator(SELECTORS["botao_voltar_venda"]).first.wait_for(state="visible", timeout=20000)
+        frame.locator(SELECTORS["botao_voltar_venda"]).first.click(force=True)
+        self.esperar("voltar para listagem")
+        self.aguardar_campo_busca()
+        self.logger.info("Retorno para a listagem concluído.")
 
     # ==========================================================
     # SUPORTE
@@ -439,16 +546,13 @@ class SturAutomation:
 
     def _obter_headers_grid(self) -> list[str]:
         frame = self._frame()
-        headers_locator = frame.locator("#c0_PH1_GridView1 tr").first.locator("th")
-
-        headers = []
+        headers_locator = frame.locator("#c0_PH1_GridView1 th")
+        headers: list[str] = []
 
         for i in range(headers_locator.count()):
             th = headers_locator.nth(i)
-
-            texto = th.inner_text().replace("\n", " ").strip()
+            texto = " ".join(th.inner_text().split()).strip()
             colspan = th.get_attribute("colspan")
-
             qtd_colunas = int(colspan) if colspan and colspan.isdigit() else 1
 
             if not texto or texto == "\xa0":
@@ -462,9 +566,14 @@ class SturAutomation:
 
         return headers
 
-    def _mapear_linha_por_headers(self, headers: list[str], valores: list[str]) -> dict:
-        dados = {}
+    def _mapear_linha_por_headers(self, headers: list[str], valores: list[str]) -> dict[str, str]:
+        if len(headers) != len(valores):
+            self.logger.warning(
+                "Quantidade de headers (%s) diferente de células (%s). Headers=%s | Valores=%s",
+                len(headers), len(valores), headers, valores,
+            )
 
+        dados: dict[str, str] = {}
         for index, valor in enumerate(valores):
             if index < len(headers):
                 dados[headers[index]] = valor

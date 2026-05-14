@@ -21,6 +21,7 @@ class Transacao:
 
 @dataclass(slots=True)
 class CandidatoVenda:
+    indice_tabela: int
     codigo_venda: str | None
     data_emissao: str | None
     data_inicio: str | None

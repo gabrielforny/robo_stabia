@@ -116,6 +116,62 @@ class ExcelService:
         df.to_excel(saida, index=False)
         return saida
 
+
+    def obter_vencimento_capa(self, arquivo: Path) -> str | None:
+        """
+        Busca na aba "Capa" o campo "Vencimento" e retorna a data no formato dd/mm/aaaa.
+
+        Layout esperado na fatura:
+        Vencimento    22/04/2026
+        """
+        if arquivo.suffix.lower() not in {".xlsx", ".xls"}:
+            return None
+
+        excel = pd.ExcelFile(arquivo)
+        sheet_name = None
+
+        for aba in excel.sheet_names:
+            if self._normalizar_texto(aba) == "capa":
+                sheet_name = aba
+                break
+
+        if sheet_name is None:
+            sheet_name = 0
+
+        df_capa = pd.read_excel(arquivo, sheet_name=sheet_name, header=None, dtype=object)
+
+        for row_idx in range(df_capa.shape[0]):
+            for col_idx in range(df_capa.shape[1]):
+                valor = df_capa.iat[row_idx, col_idx]
+                if self._normalizar_texto(valor) == "vencimento":
+                    # Primeiro tenta a célula ao lado.
+                    if col_idx + 1 < df_capa.shape[1]:
+                        vencimento = self._formatar_data_saida(df_capa.iat[row_idx, col_idx + 1])
+                        if vencimento:
+                            return vencimento
+
+                    # Fallback: procura qualquer data na mesma linha.
+                    for prox_col_idx in range(col_idx + 1, df_capa.shape[1]):
+                        vencimento = self._formatar_data_saida(df_capa.iat[row_idx, prox_col_idx])
+                        if vencimento:
+                            return vencimento
+
+        return None
+
+    def _formatar_data_saida(self, valor) -> str | None:
+        if valor is None:
+            return None
+
+        texto = str(valor).strip()
+        if not texto or texto.lower() == "nan":
+            return None
+
+        data = pd.to_datetime(valor, dayfirst=True, errors="coerce")
+        if pd.isna(data):
+            return None
+
+        return data.strftime("%d/%m/%Y")
+
     def validar_total_primeira_aba(self, arquivo: Path, df_processado: pd.DataFrame) -> str:
         if arquivo.suffix.lower() not in {".xlsx", ".xls"}:
             return "Validação de total não aplicada para CSV."

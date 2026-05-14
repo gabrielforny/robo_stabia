@@ -90,3 +90,22 @@ Regra aplicada:
   - busca apenas por `Fornecedor` e `Fornecedor Serviço`.
 
 Em todos os casos genéricos, o robô só aplica filtro de data se a busca inicial retornar alguma linha.
+
+
+## Ajuste desta versão - pagamento do fornecedor
+
+Quando encontrar uma venda com valor confiável/exato, o robô agora executa também:
+
+1. Clica no ícone **Editar** da linha encontrada na listagem de Vendas.
+2. Na tela da venda, clica no primeiro ícone **Editar pagamento** da tabela de Pagamento do Fornecedor.
+3. Seleciona **Cartão de Crédito Agência**.
+4. Seleciona o titular **Fabio Antununcio - CARTÃO DIGITAL** (`value=29`).
+5. Preenche a **Data de Vencimento** usando o campo `Vencimento` da aba **Capa** do Excel.
+6. Clica em **OK** no modal.
+7. Clica em **Gravar** na venda.
+8. Clica em **Voltar** para retornar à listagem.
+9. Limpa filtros e segue para o próximo item.
+
+Também foi corrigido o mapeamento da tabela de Vendas para respeitar `colspan` no cabeçalho, evitando deslocamento de colunas como `Total Cliente` e `Total Fornecedor`.
+
+Durante a homologação, o arquivo de saída é salvo parcialmente após cada item processado dentro da pasta `output/`.

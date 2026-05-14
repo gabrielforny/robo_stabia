@@ -86,6 +86,7 @@ def processar_transacao(
     df,
     transacao: Transacao,
     tolerancia: Decimal,
+    data_vencimento_capa: str | None,
     logger,
 ) -> bool:
     logger.info("============================================================")
@@ -113,7 +114,7 @@ def processar_transacao(
         if len(candidatos) == 1:
             candidato = candidatos[0]
             excel_service.escrever_resultado(df, transacao, f"OK | Venda={candidato.codigo_venda} | Localizada por VCN")
-            stur.seguir_fluxo_venda_ok(candidato)
+            stur.seguir_fluxo_venda_ok(candidato, data_vencimento_capa)
             stur.limpar_filtros_com_calma()
             return True
 
@@ -146,7 +147,7 @@ def processar_transacao(
             f"Excel={transacao.valor_excel} | Fornecedor={candidato_exato.total_fornecedor} | Cliente={candidato_exato.total_cliente}"
         )
         excel_service.escrever_resultado(df, transacao, mensagem)
-        stur.seguir_fluxo_venda_ok(candidato_exato)
+        stur.seguir_fluxo_venda_ok(candidato_exato, data_vencimento_capa)
         stur.limpar_filtros_com_calma()
         return True
 
@@ -167,6 +168,9 @@ def processar_arquivo(arquivo: Path, headless: bool) -> ResultadoProcessamento:
     df, aba = excel_service.carregar_transacoes(arquivo)
     logger.info("Aba carregada: %s | Colunas: %s", aba, list(df.columns))
 
+    data_vencimento_capa = excel_service.obter_vencimento_capa(arquivo)
+    logger.info("Data de vencimento encontrada na aba Capa: %s", data_vencimento_capa)
+
     transacoes = excel_service.montar_transacoes(df)
     logger.info("Total de linhas a processar: %d", len(transacoes))
 
@@ -185,6 +189,7 @@ def processar_arquivo(arquivo: Path, headless: bool) -> ResultadoProcessamento:
                     df=df,
                     transacao=transacao,
                     tolerancia=config.tolerancia_valor,
+                    data_vencimento_capa=data_vencimento_capa,
                     logger=logger,
                 )
 
@@ -192,6 +197,9 @@ def processar_arquivo(arquivo: Path, headless: bool) -> ResultadoProcessamento:
                     total_sucesso += 1
                 else:
                     total_erro += 1
+
+                arquivo_parcial = excel_service.salvar_saida(df, arquivo)
+                logger.info("Backup parcial salvo em: %s", arquivo_parcial)
 
             except Exception as exc:
                 total_erro += 1
@@ -206,6 +214,12 @@ def processar_arquivo(arquivo: Path, headless: bool) -> ResultadoProcessamento:
                     mensagem += f" | Screenshot={screenshot}"
 
                 excel_service.escrever_resultado(df, transacao, mensagem)
+                try:
+                    arquivo_parcial = excel_service.salvar_saida(df, arquivo)
+                    logger.info("Backup parcial salvo após erro em: %s", arquivo_parcial)
+                except Exception:
+                    logger.warning("Não foi possível salvar backup parcial após erro.")
+
                 logger.exception("Erro inesperado na linha %s", transacao.linha_excel)
 
                 try:

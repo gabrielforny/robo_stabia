@@ -1,0 +1,57 @@
+2026-05-14 18:51:31,168 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260514_185131.log
+2026-05-14 18:51:31,169 | INFO | robo_stur | Iniciando processamento: /Users/gabrielfornydesouzamuniz/Downloads/excel_stur.xlsx
+2026-05-14 18:51:31,344 | INFO | robo_stur | Aba carregada: Transações | Colunas: ['Unnamed: 0', 'Data da transação', 'Data de aprovação', 'Cartão', 'Usuario', 'Estabelecimento', 'Tipo de transação', 'Código de autorização', 'Valor em moeda estrangeira', 'Código da moeda estrangeira', 'Taxa de câmbio', 'Valor em R$', 'Parcela', 'IOF', 'VCN']
+2026-05-14 18:51:31,404 | INFO | robo_stur | Data de vencimento encontrada na aba Capa: 22/04/2026
+2026-05-14 18:51:31,414 | INFO | robo_stur | Total de linhas a processar: 464
+2026-05-14 18:51:32,381 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-05-14 18:51:36,800 | INFO | robo_stur | Aguardando 3s — usuário preenchido
+2026-05-14 18:51:40,144 | INFO | robo_stur | Aguardando 3s — senha preenchida
+2026-05-14 18:51:44,429 | INFO | robo_stur | Aguardando 3s — login enviado
+2026-05-14 18:51:47,459 | WARNING | robo_stur | Sessão ativa detectada. Clicando em desbloquear usuário ativo...
+2026-05-14 18:51:47,795 | INFO | robo_stur | Aguardando 3s — usuário desbloqueado
+2026-05-14 18:51:50,800 | INFO | robo_stur | Login realizado.
+2026-05-14 18:51:50,800 | INFO | robo_stur | Acessando Operacional -> Vendas
+2026-05-14 18:51:51,164 | INFO | robo_stur | Aguardando 3s — hover no menu Operacional
+2026-05-14 18:51:54,564 | INFO | robo_stur | Aguardando 3s — tela de Vendas carregando
+2026-05-14 18:52:00,963 | INFO | robo_stur | Tela de Vendas pronta.
+2026-05-14 18:52:00,964 | INFO | robo_stur | ============================================================
+2026-05-14 18:52:00,964 | INFO | robo_stur | Linha Excel 2
+2026-05-14 18:52:00,964 | INFO | robo_stur | Tipo busca: LATAM
+2026-05-14 18:52:00,964 | INFO | robo_stur | Estabelecimento: ESTORNO DE LATAM DCP ND*DDBADK
+2026-05-14 18:52:00,964 | INFO | robo_stur | VCN: nan | Código Venda VCN: None
+2026-05-14 18:52:00,964 | INFO | robo_stur | Localizador extraído: DDBADK
+2026-05-14 18:52:00,964 | INFO | robo_stur | Termo: DDBADK | Coluna: Localizador
+2026-05-14 18:52:00,964 | INFO | robo_stur | Data STUR: 13/03/2026 | Valor Excel: -4748.32
+2026-05-14 18:52:00,964 | INFO | robo_stur | Estratégia LATAM: buscar Localizador=DDBADK
+2026-05-14 18:52:00,964 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-05-14 18:52:00,975 | WARNING | robo_stur | Botão Limpar/Cancelar filtro não encontrado. Limpando campo search manualmente.
+2026-05-14 18:52:01,284 | INFO | robo_stur | Aguardando 3s — campo search limpo manualmente
+2026-05-14 18:52:04,305 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-05-14 18:52:04,651 | INFO | robo_stur | Aguardando 3s — coluna Localizador selecionada
+2026-05-14 18:52:07,655 | INFO | robo_stur | Preenchendo search com: DDBADK
+2026-05-14 18:52:10,061 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-05-14 18:52:13,379 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-05-14 18:52:16,385 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-05-14 18:52:16,731 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-05-14 18:52:19,736 | INFO | robo_stur | Aguardando 3s — consulta por Localizador
+2026-05-14 18:52:22,742 | INFO | robo_stur | Validando resultados da tabela. Origem=Localizador
+2026-05-14 18:52:22,908 | INFO | robo_stur | Colunas detectadas: ['Ações_1', 'Ações_2', 'Ações_3', 'Ações_4', 'Ações_5', 'Ações_6', 'Ações_7', '__COLUNA_VAZIA_1', 'Venda', 'Situação', 'Cliente', 'CNPJ/CPF', 'Produto', 'Fornecedor', 'Fornecedor Serviço', 'CNPJ Fornecedor Serviço', 'Destino', 'Data de Emissão', 'Data de Confirmação', 'Emissor', 'Promotor', 'Coordenador', 'Auxiliar', 'Passageiro', 'Localizador', 'No. Confirmação', 'Seq. EBTA', 'Cód. Integração', 'File', 'C. de Custos Filial', 'Solicitante', 'Filial', 'C. de Custos Cliente', 'Setor Cliente', 'Projeto', 'Autorizador', 'Atividade', 'Total Cliente', 'Total Fornecedor', 'Número Pré-Venda', 'Id RM', 'Status Exp. RM', 'Tipo Cliente', 'Comis.AGT. Viagem', 'Grupo Cliente', 'Integração']
+2026-05-14 18:52:23,007 | INFO | robo_stur | Candidato coletado | Venda=00026066 | Fornecedor=LATAM | Forn.Serviço=LATAM | Emissão=13/03/2026 | Início=None | Término=None | TotalCliente=4774.72 | TotalFornecedor=4748.32
+2026-05-14 18:52:23,007 | INFO | robo_stur | Total de candidatos coletados: 1
+2026-05-14 18:52:23,007 | INFO | robo_stur | Validando candidatos com valor exato. Valor Excel=-4748.32
+2026-05-14 18:52:23,007 | INFO | robo_stur | Analisando candidato | Venda=00026066 | TotalFornecedor=4748.32 | TotalCliente=4774.72 | Origem=Localizador
+2026-05-14 18:52:23,007 | INFO | robo_stur | Candidato EXATO aprovado. Venda=00026066
+2026-05-14 18:52:23,009 | INFO | robo_stur | Venda validada. Iniciando alteração de pagamento | Venda=00026066 | Linha tabela=1 | Vencimento=22/04/2026
+2026-05-14 18:52:23,009 | INFO | robo_stur | Abrindo edição da venda na linha da tabela: 1
+2026-05-14 18:52:23,361 | INFO | robo_stur | Aguardando 3s — abrir tela de edição da venda
+2026-05-14 18:52:30,281 | INFO | robo_stur | Tela de edição da venda carregada.
+2026-05-14 18:52:30,281 | INFO | robo_stur | Abrindo edição do primeiro pagamento do fornecedor.
+2026-05-14 18:52:30,606 | INFO | robo_stur | Aguardando 3s — abrir modal de pagamento do fornecedor
+2026-05-14 18:52:33,631 | INFO | robo_stur | Modal de pagamento do fornecedor aberto.
+2026-05-14 18:52:33,631 | INFO | robo_stur | Selecionando forma de pagamento: Cartão de Crédito Agência.
+2026-05-14 18:52:33,945 | INFO | robo_stur | Aguardando 3s — forma Cartão de Crédito Agência selecionada
+2026-05-14 18:52:36,950 | INFO | robo_stur | Selecionando titular: Fabio Antununcio - CARTÃO DIGITAL.
+2026-05-14 18:52:37,279 | INFO | robo_stur | Aguardando 3s — titular do cartão selecionado
+2026-05-14 18:52:40,608 | INFO | robo_stur | Aguardando 3s — número do cartão sincronizado
+2026-05-14 18:52:43,613 | INFO | robo_stur | Preenchendo vencimento do cartão: 22/04/2026
+2026-05-14 18:52:44,602 | INFO | robo_stur | Aguardando 3s — data de vencimento preenchida
