@@ -17,6 +17,8 @@ class Transacao:
     termo_busca: str
     coluna_busca: str
     tipo_busca: str  # VCN, LATAM, GENERICO, GENERICO_COM_LOCALIZADOR
+    origem_arquivo: str = ""
+    tipo_layout: str = "PADRAO"
 
 
 @dataclass(slots=True)

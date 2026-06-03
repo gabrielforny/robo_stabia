@@ -49,7 +49,7 @@ class ExcelService:
         extensao = arquivo.suffix.lower()
 
         if extensao == ".csv":
-            df = pd.read_csv(arquivo, dtype=str, sep=None, engine="python")
+            df = self._ler_csv_com_encoding(arquivo)
             return self._normalizar_df(df), "CSV"
 
         if extensao in {".xlsx", ".xls"}:
@@ -60,10 +60,12 @@ class ExcelService:
 
         raise ValueError(f"Formato não suportado: {extensao}")
 
-    def montar_transacoes(self, df: pd.DataFrame) -> list[Transacao]:
-        coluna_estabelecimento = self._resolver_coluna_estabelecimento(df)
-        coluna_data = self._resolver_coluna_data_aprovacao(df)
-        coluna_valor = self._resolver_coluna_valor(df)
+    def montar_transacoes(self, df: pd.DataFrame, origem_arquivo: str | None = None) -> list[Transacao]:
+        tipo_layout = self._identificar_layout(df)
+
+        coluna_estabelecimento = self._resolver_coluna_estabelecimento(df, tipo_layout=tipo_layout)
+        coluna_data = self._resolver_coluna_data_aprovacao(df, tipo_layout=tipo_layout)
+        coluna_valor = self._resolver_coluna_valor(df, tipo_layout=tipo_layout)
         coluna_vcn = self._resolver_coluna_vcn(df)
 
         transacoes: list[Transacao] = []
@@ -100,6 +102,8 @@ class ExcelService:
                     termo_busca=termo_busca,
                     coluna_busca=coluna_busca,
                     tipo_busca=tipo_busca,
+                    origem_arquivo=origem_arquivo or "",
+                    tipo_layout=tipo_layout,
                 )
             )
 
@@ -112,6 +116,7 @@ class ExcelService:
         df.at[transacao.indice_planilha, coluna] = resultado
 
     def salvar_saida(self, df: pd.DataFrame, arquivo_original: Path) -> Path:
+        self.config.output_dir.mkdir(exist_ok=True)
         saida = self.config.output_dir / f"{arquivo_original.stem}_processado.xlsx"
         df.to_excel(saida, index=False)
         return saida
@@ -190,6 +195,59 @@ class ExcelService:
             return "Não encontrei 'Total a pagar' na primeira aba."
 
         return f"Total a pagar localizado na primeira aba: {total_a_pagar}"
+
+
+    def _ler_csv_com_encoding(self, arquivo: Path) -> pd.DataFrame:
+        """
+        Lê CSV tentando os encodings mais comuns.
+
+        O arquivo novo da Clara veio em latin1/cp1252 e separado por ponto e vírgula.
+        Mantemos sep=None para também aceitar CSV separado por vírgula.
+        """
+        ultimo_erro: Exception | None = None
+
+        # Tenta primeiro ponto e vírgula porque é o layout recebido da Clara.
+        # Depois tenta autodetect para manter compatibilidade com outros CSVs.
+        tentativas = [
+            {"sep": ";", "engine": "python"},
+            {"sep": None, "engine": "python"},
+            {"sep": ",", "engine": "python"},
+        ]
+
+        for encoding in ("utf-8-sig", "utf-8", "latin1", "cp1252"):
+            for tentativa in tentativas:
+                try:
+                    df = pd.read_csv(arquivo, dtype=str, encoding=encoding, **tentativa)
+
+                    # Se veio tudo em uma coluna contendo ';', provavelmente o separador foi lido errado.
+                    if len(df.columns) == 1 and ";" in str(df.columns[0]):
+                        continue
+
+                    return df
+                except UnicodeDecodeError as exc:
+                    ultimo_erro = exc
+                    break
+                except Exception as exc:
+                    ultimo_erro = exc
+                    continue
+
+        raise ValueError(f"Não consegui ler o CSV {arquivo}. Último erro: {ultimo_erro}")
+
+    def _identificar_layout(self, df: pd.DataFrame) -> str:
+        """
+        Identifica o tipo de arquivo de entrada.
+
+        - CLARA: CSV novo com colunas Transação, Valor original e Valor em R$.
+        - PADRAO: planilha/arquivo antigo que já vínhamos usando.
+        """
+        colunas_normalizadas = {self._normalizar_texto(col) for col in df.columns}
+
+        if "transacao" in colunas_normalizadas and (
+            "valor original" in colunas_normalizadas or "valor em r$" in colunas_normalizadas
+        ):
+            return "CLARA"
+
+        return "PADRAO"
 
     def _definir_estrategia_busca(
         self,
@@ -273,16 +331,29 @@ class ExcelService:
         df = df.dropna(how="all").reset_index(drop=True)
         return df
 
-    def _resolver_coluna_estabelecimento(self, df: pd.DataFrame) -> str:
-        candidatos = ["estabelecimento", "fornecedor", "descricao", "descrição", "historico", "histórico"]
-        return self._procurar_coluna(df, candidatos, obrigatoria=True, finalidade="estabelecimento")
+    def _resolver_coluna_estabelecimento(self, df: pd.DataFrame, tipo_layout: str = "PADRAO") -> str:
+        if tipo_layout == "CLARA":
+            candidatos = ["transação", "transacao"]
+        else:
+            candidatos = ["estabelecimento", "fornecedor", "descricao", "descrição", "historico", "histórico", "transação", "transacao"]
 
-    def _resolver_coluna_data_aprovacao(self, df: pd.DataFrame) -> str | None:
-        candidatos = ["data de aprovação", "data de aprovacao", "data aprovacao", "data aprovação", "data da transação", "data da transacao", "data"]
-        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="data de aprovação")
+        return self._procurar_coluna(df, candidatos, obrigatoria=True, finalidade="descrição/estabelecimento")
 
-    def _resolver_coluna_valor(self, df: pd.DataFrame) -> str | None:
-        candidatos = ["valor em r$", "valor em reais", "valor", "valor pago", "total", "total a pagar"]
+    def _resolver_coluna_data_aprovacao(self, df: pd.DataFrame, tipo_layout: str = "PADRAO") -> str | None:
+        if tipo_layout == "CLARA":
+            candidatos = ["data da transação", "data da transacao"]
+        else:
+            candidatos = ["data de aprovação", "data de aprovacao", "data aprovacao", "data aprovação", "data da transação", "data da transacao", "data"]
+
+        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="data")
+
+    def _resolver_coluna_valor(self, df: pd.DataFrame, tipo_layout: str = "PADRAO") -> str | None:
+        if tipo_layout == "CLARA":
+            # Preferimos Valor em R$ porque já vem convertido. Se não existir, usa Valor original.
+            candidatos = ["valor em r$", "valor original"]
+        else:
+            candidatos = ["valor em r$", "valor em reais", "valor original", "valor", "valor pago", "total", "total a pagar"]
+
         return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="valor")
 
     def _resolver_coluna_vcn(self, df: pd.DataFrame) -> str | None:
