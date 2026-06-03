@@ -19,6 +19,8 @@ class Transacao:
     tipo_busca: str  # VCN, LATAM, GENERICO, GENERICO_COM_LOCALIZADOR
     origem_arquivo: str = ""
     tipo_layout: str = "PADRAO"
+    extrato_conta: str = ""
+    data_fatura: str = ""
 
 
 @dataclass(slots=True)

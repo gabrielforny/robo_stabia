@@ -13,6 +13,12 @@ MESES_PT = {
     "Set": "09", "Out": "10", "Nov": "11", "Dez": "12",
 }
 
+MESES_EN = {
+    "Jan": "01", "Feb": "02", "Mar": "03", "Apr": "04",
+    "May": "05", "Jun": "06", "Jul": "07", "Aug": "08",
+    "Sep": "09", "Oct": "10", "Nov": "11", "Dec": "12",
+}
+
 
 def converter_data_excel_para_stur(data_excel: str) -> str:
     """Converte datas do Excel para dd/mm/aaaa quando possível."""
@@ -67,6 +73,7 @@ class ExcelService:
         coluna_data = self._resolver_coluna_data_aprovacao(df, tipo_layout=tipo_layout)
         coluna_valor = self._resolver_coluna_valor(df, tipo_layout=tipo_layout)
         coluna_vcn = self._resolver_coluna_vcn(df)
+        coluna_extrato = self._resolver_coluna_extrato(df)
 
         transacoes: list[Transacao] = []
 
@@ -79,6 +86,8 @@ class ExcelService:
             data_stur = converter_data_excel_para_stur(data_excel)
             valor_excel = self._parse_decimal(row.get(coluna_valor)) if coluna_valor else None
             vcn = str(row.get(coluna_vcn, "") or "").strip() if coluna_vcn else ""
+            extrato_conta = str(row.get(coluna_extrato, "") or "").strip() if coluna_extrato else ""
+            data_fatura = self._converter_extrato_para_data_fatura(extrato_conta)
 
             codigo_venda_vcn = self._extrair_codigo_venda_vcn(vcn)
             localizador_extraido = self._extrair_localizador_apos_asterisco(estabelecimento)
@@ -104,6 +113,8 @@ class ExcelService:
                     tipo_busca=tipo_busca,
                     origem_arquivo=origem_arquivo or "",
                     tipo_layout=tipo_layout,
+                    extrato_conta=extrato_conta,
+                    data_fatura=data_fatura,
                 )
             )
 
@@ -359,6 +370,37 @@ class ExcelService:
     def _resolver_coluna_vcn(self, df: pd.DataFrame) -> str | None:
         candidatos = ["vcn", "venda", "codigo venda", "código venda"]
         return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="VCN")
+
+    def _resolver_coluna_extrato(self, df: pd.DataFrame) -> str | None:
+        candidatos = ["extrato da conta", "extrato", "periodo", "período", "period", "fatura"]
+        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="extrato da conta")
+
+    def _converter_extrato_para_data_fatura(self, extrato: str) -> str:
+        """
+        Converte 'Extrato da conta' como '16 May 2026 - 15 Jun 2026' para a data final: '15/06/2026'.
+        Essa data é usada como Fatura ao criar conferências LATAM.
+        """
+        texto = str(extrato or "").strip()
+        if not texto or texto.lower() == "nan":
+            return ""
+
+        parte_fim = texto.split(" - ")[-1].strip() if " - " in texto else texto
+
+        try:
+            dt = pd.to_datetime(parte_fim, dayfirst=True, errors="coerce")
+            if pd.notna(dt):
+                return dt.strftime("%d/%m/%Y")
+        except Exception:
+            pass
+
+        match = re.match(r"(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})", parte_fim)
+        if match:
+            dia, mes_en, ano = match.group(1), match.group(2).title(), match.group(3)
+            mes_num = MESES_EN.get(mes_en, "")
+            if mes_num:
+                return f"{dia.zfill(2)}/{mes_num}/{ano}"
+
+        return ""
 
     def _procurar_coluna(self, df: pd.DataFrame, candidatos: list[str], obrigatoria: bool, finalidade: str) -> str | None:
         mapa = {self._normalizar_texto(col): col for col in df.columns}

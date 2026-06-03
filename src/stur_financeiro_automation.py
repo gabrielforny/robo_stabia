@@ -308,6 +308,209 @@ class SturFinanceiroAutomation:
         self.esperar("abrir tela de edição")
 
     # ==========================================================
+    # FLUXO LATAM — CONFERÊNCIAS
+    # ==========================================================
+    def buscar_ou_criar_conferencia_latam(
+        self,
+        descricao_busca: str,
+        descricao_criar: str,
+        data_fatura: str,
+    ) -> None:
+        """Busca conferência pelo termo. Se existir, abre em edição; se não, cria nova."""
+        self.limpar_filtros_com_calma()
+        self.clicar_coluna("Descrição")
+        self.preencher_search(descricao_busca)
+
+        resultados = self.coletar_resultados_da_tabela()
+
+        if resultados:
+            self.logger.info("Conferência '%s' encontrada. Abrindo em edição.", descricao_busca)
+            self.clicar_editar_linha(resultados[0]["__linha_locator"])
+        else:
+            self.logger.info("Conferência '%s' não encontrada. Criando nova.", descricao_busca)
+            self._criar_nova_conferencia(descricao_criar, data_fatura)
+
+        self.esperar("conferência aberta")
+
+    def _criar_nova_conferencia(self, descricao: str, data_fatura: str) -> None:
+        frame = self._frame()
+        self.logger.info("Criando nova conferência | Descrição=%s | Fatura=%s", descricao, data_fatura)
+
+        img_novo = frame.locator("#c0_PH1_UsrCabecLista1_ImgNovo")
+        img_novo.wait_for(state="visible", timeout=15000)
+        img_novo.click()
+        self.esperar("clique em ImgNovo")
+
+        edt_desc = frame.locator("#c0_PH1_EdtDescricao")
+        edt_desc.wait_for(state="visible", timeout=15000)
+        edt_desc.fill(descricao)
+
+        if data_fatura:
+            edt_fatura = frame.locator("#c0_PH1_EdtFatura")
+            edt_fatura.wait_for(state="visible", timeout=10000)
+            edt_fatura.fill(data_fatura)
+
+        self.esperar("campos conferência preenchidos")
+
+    def abrir_adicionar_titulos(self) -> None:
+        frame = self._frame()
+        self.logger.info("Clicando em Adicionar Títulos")
+
+        btn_funcao = frame.locator("#c0_PH1_UsrRodapeEdicao1_BtnFuncao")
+        btn_funcao.wait_for(state="visible", timeout=15000)
+        btn_funcao.click()
+        self.esperar("Adicionar Títulos clicado")
+
+        # aguarda sub-tela carregar e seleciona Clientes
+        frame2 = self._frame()
+        rad_cliente = frame2.locator("#c0_PH1_RadCliente")
+        rad_cliente.wait_for(state="visible", timeout=20000)
+        rad_cliente.click()
+        self.esperar("Clientes selecionado")
+
+        btn_filtrar = frame2.locator("#c0_PH1_BtnFiltroTitulosOk")
+        btn_filtrar.wait_for(state="visible", timeout=15000)
+        btn_filtrar.click()
+        self.esperar("Filtrar clicado")
+        self.esperar("aguardando lista de títulos")
+
+    def garantir_coluna_localizador_visivel(self) -> None:
+        frame = self._frame()
+        self.logger.info("Verificando coluna Localizador na sub-tela de títulos")
+
+        col = frame.locator(
+            f"{self.GRID} th a",
+            has_text=re.compile(r"^\s*Localizador\s*$", re.I),
+        )
+
+        if col.count() > 0 and col.first.is_visible():
+            self.logger.info("Coluna Localizador já visível")
+            return
+
+        self.logger.info("Habilitando coluna Localizador via ícone de colunas visíveis")
+        img_eye = frame.locator("#c0_PH1_ImgColunasVisiveis")
+        img_eye.wait_for(state="visible", timeout=15000)
+        img_eye.click()
+        self.esperar("painel colunas aberto")
+
+        chk_loc = frame.locator("#c0_PH1_ChkLocalizador")
+        chk_loc.wait_for(state="visible", timeout=10000)
+        if not chk_loc.is_checked():
+            chk_loc.check(force=True)
+            self.esperar("Localizador marcado")
+
+        img_eye.click()
+        self.esperar("painel colunas fechado")
+
+    def buscar_e_selecionar_localizador(
+        self,
+        localizador: str,
+        valor_excel: Decimal | None = None,
+    ) -> tuple[bool, str]:
+        """
+        Busca o localizador na sub-tela de títulos, valida o 'Valor Oficial' contra
+        valor_excel (ignorando sinal) e, se bater, marca o ChkSelecionado.
+
+        Retorna (sucesso, mensagem).
+        """
+        self.logger.info("Buscando localizador nos títulos: %s", localizador)
+
+        self.clicar_coluna("Localizador")
+        self.preencher_search(localizador)
+
+        frame = self._frame()
+        grid = frame.locator(self.GRID)
+        grid.wait_for(state="visible", timeout=15000)
+
+        # Títulos usam tr.d (ou tr.g); buscamos qualquer linha que tenha ChkSelecionado
+        linhas = grid.locator("tr:has([id*='ChkSelecionado'])")
+
+        if linhas.count() == 0:
+            self.logger.warning("Localizador %s não encontrado nos títulos", localizador)
+            self.limpar_filtros_com_calma()
+            return False, f"localizador {localizador} não encontrado nos títulos disponíveis"
+
+        linha = linhas.first
+
+        # Valida Valor Oficial antes de marcar
+        if valor_excel is not None:
+            valor_tabela = self._obter_valor_oficial_da_linha(linha)
+            if valor_tabela is not None:
+                if abs(valor_tabela) != abs(valor_excel):
+                    self.logger.warning(
+                        "Valor não bate | localizador=%s | tabela=%s | excel=%s",
+                        localizador, valor_tabela, valor_excel,
+                    )
+                    self.limpar_filtros_com_calma()
+                    return False, (
+                        f"valor não bate | Valor Oficial={valor_tabela} | Excel={valor_excel}"
+                    )
+                self.logger.info(
+                    "Valor conferido | localizador=%s | %s = %s", localizador, valor_tabela, valor_excel
+                )
+            else:
+                self.logger.warning("Não foi possível ler Valor Oficial da linha; prosseguindo sem validação")
+
+        chk = linha.locator("[id*='ChkSelecionado']")
+        if chk.count() > 0:
+            chk.first.check(force=True)
+            self.esperar("localizador selecionado")
+            self.logger.info("Localizador %s marcado com sucesso", localizador)
+            self.limpar_filtros_com_calma()
+            return True, "OK"
+
+        self.logger.warning("ChkSelecionado não encontrado na linha do localizador %s", localizador)
+        self.limpar_filtros_com_calma()
+        return False, f"ChkSelecionado não encontrado na linha do localizador {localizador}"
+
+    def _obter_valor_oficial_da_linha(self, linha: Locator) -> Decimal | None:
+        """Lê a coluna 'Valor Oficial' da linha usando os headers do grid."""
+        headers = self._obter_headers_grid()
+        valor_idx = next(
+            (i for i, h in enumerate(headers) if "valor oficial" in h.lower()),
+            None,
+        )
+
+        if valor_idx is None:
+            self.logger.warning("Coluna 'Valor Oficial' não encontrada nos headers: %s", headers)
+            return None
+
+        tds = linha.locator("td")
+        if valor_idx >= tds.count():
+            return None
+
+        texto = self._normalizar_texto(tds.nth(valor_idx).inner_text())
+        return self._parse_valor_decimal(texto)
+
+    def gravar_titulos(self) -> None:
+        frame = self._frame()
+        self.logger.info("Gravando títulos selecionados")
+
+        # type="button" para a sub-tela de títulos
+        btn = frame.locator("#c0_PH1_UsrRodapeEdicao1_BtnGravar[type='button']")
+        if btn.count() == 0:
+            btn = frame.locator("#c0_PH1_UsrRodapeEdicao1_BtnGravar").first
+
+        btn.wait_for(state="visible", timeout=15000)
+        btn.click()
+        self.esperar("títulos gravados")
+        self.esperar("aguardando retorno à conferência")
+
+    def gravar_conferencia(self) -> None:
+        frame = self._frame()
+        self.logger.info("Gravando conferência")
+
+        # type="submit" na tela de edição da conferência
+        btn = frame.locator("#c0_PH1_UsrRodapeEdicao1_BtnGravar[type='submit']")
+        if btn.count() == 0:
+            btn = frame.locator("#c0_PH1_UsrRodapeEdicao1_BtnGravar").first
+
+        btn.wait_for(state="visible", timeout=15000)
+        btn.click()
+        self.esperar("conferência gravada")
+        self.esperar("aguardando retorno à lista")
+
+    # ==========================================================
     # UTILITÁRIOS
     # ==========================================================
     def _normalizar_texto(self, texto: str | None) -> str:
