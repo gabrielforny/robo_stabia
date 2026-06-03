@@ -1,0 +1,102 @@
+2026-06-03 12:02:21,474 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260603_120221.log
+2026-06-03 12:02:21,474 | INFO | robo_stur | Iniciando processamento - fluxo LATAM / Conferências
+2026-06-03 12:02:21,474 | INFO | robo_stur | Arquivos recebidos: ['/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/CLARA MES 6.csv']
+2026-06-03 12:02:23,163 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-06-03 12:02:25,601 | INFO | robo_stur | Aguardando 3s — usuário preenchido
+2026-06-03 12:02:28,921 | INFO | robo_stur | Aguardando 3s — senha preenchida
+2026-06-03 12:02:32,836 | INFO | robo_stur | Aguardando 3s — login enviado
+2026-06-03 12:02:35,874 | WARNING | robo_stur | Sessão ativa detectada. Clicando em desbloquear usuário ativo...
+2026-06-03 12:02:39,619 | INFO | robo_stur | Aguardando 3s — usuário desbloqueado
+2026-06-03 12:02:42,622 | INFO | robo_stur | Login realizado.
+2026-06-03 12:02:42,622 | INFO | robo_stur | Navegando para Conferências e Baixas por Conferência via JS
+2026-06-03 12:02:42,636 | INFO | robo_stur | Aguardando 3s | redirecionamento para ListaConferencias
+2026-06-03 12:02:45,684 | INFO | robo_stur | Tela de Conferências e Baixas carregada.
+2026-06-03 12:02:45,685 | INFO | robo_stur | Iniciando processamento do arquivo: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/CLARA MES 6.csv
+2026-06-03 12:02:45,693 | INFO | robo_stur | Aba/tipo carregado: CSV | Colunas: ['Data da Transação', 'Extrato da conta', 'Transação', 'Valor original', 'Moeda original', 'Valor em R$', 'Cartão', 'Alias Do Cartão', 'Status', 'Status de aprovação', 'Nome do aprovador', 'Nota do aprovador', 'Código de autorização', 'Categoria da Compra', 'Recibo', 'Nome dos Recibos', 'Titular', 'Grupos', 'Localização', 'Etiquetas', 'Descrição', 'IA - Possui fatura?', 'IA - Verificação de fatura', 'IA - Verificado por:', 'IA - Possui recibo?', 'IA - Verificação de recibo', 'IA - Verificado por:.1', 'IA - Possui outro documento?', 'IA - Nº da Fatura', 'IA - Nome legal', 'IA - CNPJ do emissor', 'IA - Data da compra', 'IA - Hora da compra', 'IA - Moeda do documento', 'IA - Valor subtotal', 'IA - Percentual da gorjeta', 'IA - Gorjeta R$', 'IA - Percentual de IVA', 'IA - Valor do IVA R$', 'IA - Valor total pago R$', 'IA - Lista de Compras (conceito, quantidade, preço por unidade, Desconto (se aplicável), preço total)']
+2026-06-03 12:02:45,711 | INFO | robo_stur | Total de linhas a processar: 49
+2026-06-03 12:02:45,712 | INFO | robo_stur | LATAM: 5 | Outros: 44
+2026-06-03 12:02:45,712 | INFO | robo_stur | Processando conferência LATAM: Clara 06/2026 - teste robo | 5 item(ns)
+2026-06-03 12:02:45,712 | INFO | robo_stur | Limpando filtros da tela de conferências
+2026-06-03 12:02:46,355 | INFO | robo_stur | Aguardando 3s | limpar search manualmente
+2026-06-03 12:02:49,359 | INFO | robo_stur | Clicando na coluna: Descrição
+2026-06-03 12:02:49,732 | INFO | robo_stur | Aguardando 3s | coluna Descrição selecionada
+2026-06-03 12:02:52,737 | INFO | robo_stur | Preenchendo search: Clara 06/2026 - teste robo
+2026-06-03 12:02:53,074 | INFO | robo_stur | Aguardando 3s | search limpo
+2026-06-03 12:02:56,395 | INFO | robo_stur | Aguardando 3s | search preenchido
+2026-06-03 12:02:59,721 | INFO | robo_stur | Aguardando 3s | pesquisa executada
+2026-06-03 12:03:02,829 | INFO | robo_stur | Headers detectados: ['__COLUNA_VAZIA_0', 'Ações_1', 'Ações_2', 'Ações_3', 'Ações_4', 'Ações_5', 'Ações_6', 'Filial', 'Descrição', 'Fatura', 'Situação', 'Dt.Conferência', 'Parcela', 'Qtde Títulos', 'Valor', 'Dt.Vencto.', 'Dt.Baixa', 'Conta', 'Usuário Última alteração', 'Usuário Criação']
+2026-06-03 12:03:02,831 | INFO | robo_stur | Quantidade de linhas retornadas: 0
+2026-06-03 12:03:02,831 | INFO | robo_stur | Conferência 'Clara 06/2026 - teste robo' não encontrada. Criando nova.
+2026-06-03 12:03:02,831 | INFO | robo_stur | Criando nova conferência | Descrição=Clara 06/2026 - teste robo | Fatura=15/06/2026
+2026-06-03 12:03:03,171 | INFO | robo_stur | Aguardando 3s | clique em ImgNovo
+2026-06-03 12:03:06,840 | INFO | robo_stur | Aguardando 3s | campos conferência preenchidos
+2026-06-03 12:03:09,843 | INFO | robo_stur | Aguardando 3s | conferência aberta
+2026-06-03 12:03:12,847 | INFO | robo_stur | Clicando em Adicionar Títulos
+2026-06-03 12:03:13,212 | INFO | robo_stur | Aguardando 3s | Adicionar Títulos clicado
+2026-06-03 12:03:16,576 | INFO | robo_stur | Aguardando 3s | Clientes selecionado
+2026-06-03 12:03:19,946 | INFO | robo_stur | Aguardando 3s | Filtrar clicado
+2026-06-03 12:03:22,946 | INFO | robo_stur | Aguardando 3s | aguardando lista de títulos
+2026-06-03 12:03:25,952 | INFO | robo_stur | Verificando coluna Localizador na sub-tela de títulos
+2026-06-03 12:03:25,993 | INFO | robo_stur | Coluna Localizador já visível
+2026-06-03 12:03:25,994 | INFO | robo_stur | Buscando localizador nos títulos: SQOZBP
+2026-06-03 12:03:25,994 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-03 12:03:26,344 | INFO | robo_stur | Aguardando 3s | coluna Localizador selecionada
+2026-06-03 12:03:29,348 | INFO | robo_stur | Preenchendo search: SQOZBP
+2026-06-03 12:03:29,735 | INFO | robo_stur | Aguardando 3s | search limpo
+2026-06-03 12:03:33,055 | INFO | robo_stur | Aguardando 3s | search preenchido
+2026-06-03 12:03:36,432 | INFO | robo_stur | Aguardando 3s | pesquisa executada
+2026-06-03 12:03:39,465 | WARNING | robo_stur | Localizador SQOZBP não encontrado nos títulos
+2026-06-03 12:03:39,465 | INFO | robo_stur | Limpando filtros da tela de conferências
+2026-06-03 12:03:40,096 | INFO | robo_stur | Aguardando 3s | limpar search manualmente
+2026-06-03 12:03:43,105 | INFO | robo_stur | Buscando localizador nos títulos: HNJAXE
+2026-06-03 12:03:43,105 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-03 12:03:43,470 | INFO | robo_stur | Aguardando 3s | coluna Localizador selecionada
+2026-06-03 12:03:46,472 | INFO | robo_stur | Preenchendo search: HNJAXE
+2026-06-03 12:03:46,811 | INFO | robo_stur | Aguardando 3s | search limpo
+2026-06-03 12:03:50,129 | INFO | robo_stur | Aguardando 3s | search preenchido
+2026-06-03 12:03:53,453 | INFO | robo_stur | Aguardando 3s | pesquisa executada
+2026-06-03 12:03:56,490 | WARNING | robo_stur | Localizador HNJAXE não encontrado nos títulos
+2026-06-03 12:03:56,491 | INFO | robo_stur | Limpando filtros da tela de conferências
+2026-06-03 12:03:57,125 | INFO | robo_stur | Aguardando 3s | limpar search manualmente
+2026-06-03 12:04:00,126 | INFO | robo_stur | Buscando localizador nos títulos: GXMNCV
+2026-06-03 12:04:00,126 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-03 12:04:00,502 | INFO | robo_stur | Aguardando 3s | coluna Localizador selecionada
+2026-06-03 12:04:03,507 | INFO | robo_stur | Preenchendo search: GXMNCV
+2026-06-03 12:04:03,834 | INFO | robo_stur | Aguardando 3s | search limpo
+2026-06-03 12:04:07,152 | INFO | robo_stur | Aguardando 3s | search preenchido
+2026-06-03 12:04:10,472 | INFO | robo_stur | Aguardando 3s | pesquisa executada
+2026-06-03 12:04:13,508 | WARNING | robo_stur | Localizador GXMNCV não encontrado nos títulos
+2026-06-03 12:04:13,509 | INFO | robo_stur | Limpando filtros da tela de conferências
+2026-06-03 12:04:14,144 | INFO | robo_stur | Aguardando 3s | limpar search manualmente
+2026-06-03 12:04:17,150 | INFO | robo_stur | Buscando localizador nos títulos: WGUQJO
+2026-06-03 12:04:17,151 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-03 12:04:17,518 | INFO | robo_stur | Aguardando 3s | coluna Localizador selecionada
+2026-06-03 12:04:20,523 | INFO | robo_stur | Preenchendo search: WGUQJO
+2026-06-03 12:04:20,863 | INFO | robo_stur | Aguardando 3s | search limpo
+2026-06-03 12:04:24,183 | INFO | robo_stur | Aguardando 3s | search preenchido
+2026-06-03 12:04:27,507 | INFO | robo_stur | Aguardando 3s | pesquisa executada
+2026-06-03 12:04:30,542 | WARNING | robo_stur | Localizador WGUQJO não encontrado nos títulos
+2026-06-03 12:04:30,542 | INFO | robo_stur | Limpando filtros da tela de conferências
+2026-06-03 12:04:31,178 | INFO | robo_stur | Aguardando 3s | limpar search manualmente
+2026-06-03 12:04:34,183 | INFO | robo_stur | Buscando localizador nos títulos: WIPOEV
+2026-06-03 12:04:34,184 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-03 12:04:34,548 | INFO | robo_stur | Aguardando 3s | coluna Localizador selecionada
+2026-06-03 12:04:37,553 | INFO | robo_stur | Preenchendo search: WIPOEV
+2026-06-03 12:04:37,892 | INFO | robo_stur | Aguardando 3s | search limpo
+2026-06-03 12:04:41,212 | INFO | robo_stur | Aguardando 3s | search preenchido
+2026-06-03 12:04:44,532 | INFO | robo_stur | Aguardando 3s | pesquisa executada
+2026-06-03 12:04:47,566 | WARNING | robo_stur | Localizador WIPOEV não encontrado nos títulos
+2026-06-03 12:04:47,566 | INFO | robo_stur | Limpando filtros da tela de conferências
+2026-06-03 12:04:48,200 | INFO | robo_stur | Aguardando 3s | limpar search manualmente
+2026-06-03 12:04:51,204 | INFO | robo_stur | Gravando títulos selecionados
+2026-06-03 12:04:51,612 | INFO | robo_stur | Aguardando 3s | títulos gravados
+2026-06-03 12:04:54,618 | INFO | robo_stur | Aguardando 3s | aguardando retorno à conferência
+2026-06-03 12:04:57,618 | INFO | robo_stur | Gravando conferência
+2026-06-03 12:04:58,002 | INFO | robo_stur | Aguardando 3s | conferência gravada
+2026-06-03 12:05:01,003 | INFO | robo_stur | Aguardando 3s | aguardando retorno à lista
+2026-06-03 12:05:04,233 | INFO | robo_stur | Backup parcial salvo após LATAM em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/output/CLARA MES 6_processado.xlsx
+2026-06-03 12:05:04,233 | INFO | robo_stur | 44 transação(ões) não-LATAM ignoradas nesta versão (v2 implementará outros tipos).
+2026-06-03 12:05:04,246 | INFO | robo_stur | Arquivo salvo: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/output/CLARA MES 6_processado.xlsx
+2026-06-03 12:05:04,246 | INFO | robo_stur | Navegando para Conferências e Baixas por Conferência via JS
+2026-06-03 12:05:04,248 | INFO | robo_stur | Aguardando 3s | redirecionamento para ListaConferencias
+2026-06-03 12:05:07,292 | INFO | robo_stur | Tela de Conferências e Baixas carregada.

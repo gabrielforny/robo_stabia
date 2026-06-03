@@ -138,22 +138,18 @@ def processar_arquivo_aberto(
         arquivo_parcial = excel_service.salvar_saida(df, arquivo)
         logger.info("Backup parcial salvo após LATAM em: %s", arquivo_parcial)
 
-        try:
-            financeiro.acessar_tela_conferencias_baixas()
-        except Exception:
-            logger.warning("Não foi possível retornar à lista de conferências após LATAM.", exc_info=True)
-
-    for transacao in transacoes_outras:
-        msg = "PENDENTE | Tipo não-LATAM ainda não implementado neste fluxo"
-        excel_service.escrever_resultado(df, transacao, msg)
-        total_erro += 1
+    if transacoes_outras:
+        logger.info(
+            "%d transação(ões) não-LATAM ignoradas nesta versão (v2 implementará outros tipos).",
+            len(transacoes_outras),
+        )
 
     arquivo_saida = excel_service.salvar_saida(df, arquivo)
     logger.info("Arquivo salvo: %s", arquivo_saida)
 
     return ResultadoProcessamento(
         arquivo_saida=arquivo_saida,
-        total_linhas=len(transacoes),
+        total_linhas=len(transacoes_latam),
         total_sucesso=total_sucesso,
         total_erro=total_erro,
     )

@@ -60,22 +60,11 @@ class SturFinanceiroAutomation:
     # NAVEGAÇÃO
     # ==========================================================
     def acessar_tela_conferencias_baixas(self) -> None:
-        self.logger.info("Acessando Financeiro -> Conferências e Baixas -> Conferências e Baixas por Conferência")
-
-        try:
-            self.page.locator(self.MENU_FINANCEIRO).hover()
-            self.esperar("hover no menu Financeiro")
-
-            self.page.locator(self.MENU_CONFERENCIAS_E_BAIXAS).hover()
-            self.esperar("hover no submenu Conferências e Baixas")
-
-            self.page.locator(self.MENU_CONFERENCIAS_POR_CONFERENCIA).click()
-            self.esperar("clique em Conferências e Baixas por Conferência")
-        except Exception:
-            self.logger.warning("Menu por hover falhou. Tentando navegar direto via JavaScript.", exc_info=True)
-            self.page.evaluate("Redirecionar('ListaConferencias.aspx?fcf')")
-            self.esperar("redirecionamento direto para ListaConferencias")
-
+        self.logger.info("Navegando para Conferências e Baixas por Conferência")
+        # Aguarda o menu Financeiro estar carregado (garante que index.aspx inicializou o JS)
+        self.page.locator(self.MENU_FINANCEIRO).wait_for(state="visible", timeout=30000)
+        self.page.evaluate("Redirecionar('ListaConferencias.aspx?fcf')")
+        self.esperar("redirecionamento para ListaConferencias")
         self.aguardar_tela_conferencias()
         self.logger.info("Tela de Conferências e Baixas carregada.")
 
@@ -421,6 +410,14 @@ class SturFinanceiroAutomation:
         frame = self._frame()
         grid = frame.locator(self.GRID)
         grid.wait_for(state="visible", timeout=15000)
+
+        # Debug: loga headers e total de linhas visíveis antes de filtrar por ChkSelecionado
+        headers_debug = self._obter_headers_grid()
+        self.logger.info("[DEBUG] Headers da grid de títulos: %s", headers_debug)
+        todas_linhas = grid.locator("tr")
+        self.logger.info("[DEBUG] Total de <tr> na grid após busca: %d", todas_linhas.count())
+        for i in range(min(todas_linhas.count(), 5)):
+            self.logger.info("[DEBUG] Linha %d texto: %s", i, self._normalizar_texto(todas_linhas.nth(i).inner_text()))
 
         # Títulos usam tr.d (ou tr.g); buscamos qualquer linha que tenha ChkSelecionado
         linhas = grid.locator("tr:has([id*='ChkSelecionado'])")

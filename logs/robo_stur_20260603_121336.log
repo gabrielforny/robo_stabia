@@ -1,0 +1,13 @@
+2026-06-03 12:13:36,248 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260603_121336.log
+2026-06-03 12:13:36,248 | INFO | robo_stur | Iniciando processamento - fluxo LATAM / Conferências
+2026-06-03 12:13:36,248 | INFO | robo_stur | Arquivos recebidos: ['/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/CLARA MES 6.csv']
+2026-06-03 12:13:37,008 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-06-03 12:13:40,025 | INFO | robo_stur | Aguardando 3s — usuário preenchido
+2026-06-03 12:13:43,344 | INFO | robo_stur | Aguardando 3s — senha preenchida
+2026-06-03 12:13:47,530 | INFO | robo_stur | Aguardando 3s — login enviado
+2026-06-03 12:13:50,568 | WARNING | robo_stur | Sessão ativa detectada. Clicando em desbloquear usuário ativo...
+2026-06-03 12:13:50,905 | INFO | robo_stur | Aguardando 3s — usuário desbloqueado
+2026-06-03 12:13:53,908 | INFO | robo_stur | Login realizado.
+2026-06-03 12:13:53,908 | INFO | robo_stur | Navegando para Conferências e Baixas por Conferência
+2026-06-03 12:13:53,908 | INFO | robo_stur | URL destino: https://ww3.sturweb.com.br/STABIATURISMO/ListaConferencias.aspx?fcf
+2026-06-03 12:13:56,571 | INFO | robo_stur | Aguardando 3s | carregamento ListaConferencias

@@ -1,0 +1,205 @@
+2026-06-03 12:23:37,650 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260603_122337.log
+2026-06-03 12:23:37,650 | INFO | robo_stur | Iniciando processamento - fluxo LATAM / Conferências
+2026-06-03 12:23:37,650 | INFO | robo_stur | Arquivos recebidos: ['/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/CLARA MES 6.csv']
+2026-06-03 12:23:39,249 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-06-03 12:23:42,014 | INFO | robo_stur | Aguardando 3s — usuário preenchido
+2026-06-03 12:23:45,332 | INFO | robo_stur | Aguardando 3s — senha preenchida
+2026-06-03 12:23:49,251 | INFO | robo_stur | Aguardando 3s — login enviado
+2026-06-03 12:23:52,289 | WARNING | robo_stur | Sessão ativa detectada. Clicando em desbloquear usuário ativo...
+2026-06-03 12:23:53,374 | INFO | robo_stur | Aguardando 3s — usuário desbloqueado
+2026-06-03 12:23:56,376 | INFO | robo_stur | Login realizado.
+2026-06-03 12:23:56,377 | INFO | robo_stur | Navegando para Conferências e Baixas por Conferência
+2026-06-03 12:23:56,413 | INFO | robo_stur | Aguardando 3s | redirecionamento para ListaConferencias
+2026-06-03 12:23:59,454 | INFO | robo_stur | Tela de Conferências e Baixas carregada.
+2026-06-03 12:23:59,454 | INFO | robo_stur | Iniciando processamento do arquivo: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/CLARA MES 6.csv
+2026-06-03 12:23:59,463 | INFO | robo_stur | Aba/tipo carregado: CSV | Colunas: ['Data da Transação', 'Extrato da conta', 'Transação', 'Valor original', 'Moeda original', 'Valor em R$', 'Cartão', 'Alias Do Cartão', 'Status', 'Status de aprovação', 'Nome do aprovador', 'Nota do aprovador', 'Código de autorização', 'Categoria da Compra', 'Recibo', 'Nome dos Recibos', 'Titular', 'Grupos', 'Localização', 'Etiquetas', 'Descrição', 'IA - Possui fatura?', 'IA - Verificação de fatura', 'IA - Verificado por:', 'IA - Possui recibo?', 'IA - Verificação de recibo', 'IA - Verificado por:.1', 'IA - Possui outro documento?', 'IA - Nº da Fatura', 'IA - Nome legal', 'IA - CNPJ do emissor', 'IA - Data da compra', 'IA - Hora da compra', 'IA - Moeda do documento', 'IA - Valor subtotal', 'IA - Percentual da gorjeta', 'IA - Gorjeta R$', 'IA - Percentual de IVA', 'IA - Valor do IVA R$', 'IA - Valor total pago R$', 'IA - Lista de Compras (conceito, quantidade, preço por unidade, Desconto (se aplicável), preço total)']
+2026-06-03 12:23:59,476 | INFO | robo_stur | Total de linhas a processar: 49
+2026-06-03 12:23:59,476 | INFO | robo_stur | LATAM: 5 | Outros: 44
+2026-06-03 12:23:59,476 | INFO | robo_stur | Processando conferência LATAM: Clara 06/2026 - teste robo | 5 item(ns)
+2026-06-03 12:23:59,476 | INFO | robo_stur | Limpando filtros da tela de conferências
+2026-06-03 12:24:00,118 | INFO | robo_stur | Aguardando 3s | limpar search manualmente
+2026-06-03 12:24:03,124 | INFO | robo_stur | Clicando na coluna: Descrição
+2026-06-03 12:24:03,497 | INFO | robo_stur | Aguardando 3s | coluna Descrição selecionada
+2026-06-03 12:24:06,499 | INFO | robo_stur | Preenchendo search: Clara 06/2026 - teste robo
+2026-06-03 12:24:06,841 | INFO | robo_stur | Aguardando 3s | search limpo
+2026-06-03 12:24:10,158 | INFO | robo_stur | Aguardando 3s | search preenchido
+2026-06-03 12:24:13,487 | INFO | robo_stur | Aguardando 3s | pesquisa executada
+2026-06-03 12:24:16,594 | INFO | robo_stur | Headers detectados: ['__COLUNA_VAZIA_0', 'Ações_1', 'Ações_2', 'Ações_3', 'Ações_4', 'Ações_5', 'Ações_6', 'Filial', 'Descrição', 'Fatura', 'Situação', 'Dt.Conferência', 'Parcela', 'Qtde Títulos', 'Valor', 'Dt.Vencto.', 'Dt.Baixa', 'Conta', 'Usuário Última alteração', 'Usuário Criação']
+2026-06-03 12:24:16,595 | INFO | robo_stur | Quantidade de linhas retornadas: 0
+2026-06-03 12:24:16,595 | INFO | robo_stur | Conferência 'Clara 06/2026 - teste robo' não encontrada. Criando nova.
+2026-06-03 12:24:16,595 | INFO | robo_stur | Criando nova conferência | Descrição=Clara 06/2026 - teste robo | Fatura=15/06/2026
+2026-06-03 12:24:16,939 | INFO | robo_stur | Aguardando 3s | clique em ImgNovo
+2026-06-03 12:24:20,605 | INFO | robo_stur | Aguardando 3s | campos conferência preenchidos
+2026-06-03 12:24:23,606 | INFO | robo_stur | Aguardando 3s | conferência aberta
+2026-06-03 12:24:26,607 | INFO | robo_stur | Clicando em Adicionar Títulos
+2026-06-03 12:24:26,962 | INFO | robo_stur | Aguardando 3s | Adicionar Títulos clicado
+2026-06-03 12:24:30,328 | INFO | robo_stur | Aguardando 3s | Clientes selecionado
+2026-06-03 12:24:33,700 | INFO | robo_stur | Aguardando 3s | Filtrar clicado
+2026-06-03 12:24:36,704 | INFO | robo_stur | Aguardando 3s | aguardando lista de títulos
+2026-06-03 12:24:39,710 | INFO | robo_stur | Verificando coluna Localizador na sub-tela de títulos
+2026-06-03 12:24:39,750 | INFO | robo_stur | Coluna Localizador já visível
+2026-06-03 12:24:39,751 | INFO | robo_stur | Buscando localizador nos títulos: SQOZBP
+2026-06-03 12:24:39,751 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-03 12:24:40,106 | INFO | robo_stur | Aguardando 3s | coluna Localizador selecionada
+2026-06-03 12:24:43,107 | INFO | robo_stur | Preenchendo search: SQOZBP
+2026-06-03 12:24:43,450 | INFO | robo_stur | Aguardando 3s | search limpo
+2026-06-03 12:24:46,770 | INFO | robo_stur | Aguardando 3s | search preenchido
+2026-06-03 12:24:50,097 | INFO | robo_stur | Aguardando 3s | pesquisa executada
+2026-06-03 12:24:53,244 | INFO | robo_stur | [DEBUG] Headers da grid de títulos: ['__COLUNA_VAZIA_0', '__COLUNA_VAZIA_1', '__COLUNA_VAZIA_2', '__COLUNA_VAZIA_3', 'Vencimento', 'Documento', 'Parcela', 'Dt.Emissão', 'Localizador', 'Dados Integração', 'Valor Receber', 'Valor Pagar', 'Passageiro', 'Pagador / Beneficiário', 'Núm.Confirmação', 'Código de Autorização', 'NSU/DOC', 'File', 'Boleto / Nosso Número', 'Observação', 'Fornecedor Serviço', 'Fornecedor Principal', 'Moeda', 'Câmbio', 'Valor Oficial', 'Vendas', 'Situação Recebimento', 'Centro de Custo', 'Início', 'Término', 'Produto', 'Emissor', 'Dt. Emissao Venda', 'Número do Cartão agência']
+2026-06-03 12:24:53,245 | INFO | robo_stur | [DEBUG] Total de <tr> na grid após busca: 1
+2026-06-03 12:24:53,248 | INFO | robo_stur | [DEBUG] Linha 0 texto: Vencimento Documento Parcela Dt.Emissão Localizador Valor Receber Valor Pagar Pagador / Beneficiário Moeda Câmbio Valor Oficial Vendas Início Término
+2026-06-03 12:24:53,250 | WARNING | robo_stur | Localizador SQOZBP não encontrado nos títulos
+2026-06-03 12:24:53,250 | INFO | robo_stur | Limpando filtros da tela de conferências
+2026-06-03 12:24:53,878 | INFO | robo_stur | Aguardando 3s | limpar search manualmente
+2026-06-03 12:24:56,884 | INFO | robo_stur | Buscando localizador nos títulos: HNJAXE
+2026-06-03 12:24:56,884 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-03 12:24:57,264 | INFO | robo_stur | Aguardando 3s | coluna Localizador selecionada
+2026-06-03 12:25:00,269 | INFO | robo_stur | Preenchendo search: HNJAXE
+2026-06-03 12:25:00,606 | INFO | robo_stur | Aguardando 3s | search limpo
+2026-06-03 12:25:03,921 | INFO | robo_stur | Aguardando 3s | search preenchido
+2026-06-03 12:25:07,246 | INFO | robo_stur | Aguardando 3s | pesquisa executada
+2026-06-03 12:25:10,394 | INFO | robo_stur | [DEBUG] Headers da grid de títulos: ['__COLUNA_VAZIA_0', '__COLUNA_VAZIA_1', '__COLUNA_VAZIA_2', '__COLUNA_VAZIA_3', 'Vencimento', 'Documento', 'Parcela', 'Dt.Emissão', 'Localizador', 'Dados Integração', 'Valor Receber', 'Valor Pagar', 'Passageiro', 'Pagador / Beneficiário', 'Núm.Confirmação', 'Código de Autorização', 'NSU/DOC', 'File', 'Boleto / Nosso Número', 'Observação', 'Fornecedor Serviço', 'Fornecedor Principal', 'Moeda', 'Câmbio', 'Valor Oficial', 'Vendas', 'Situação Recebimento', 'Centro de Custo', 'Início', 'Término', 'Produto', 'Emissor', 'Dt. Emissao Venda', 'Número do Cartão agência']
+2026-06-03 12:25:10,397 | INFO | robo_stur | [DEBUG] Total de <tr> na grid após busca: 1
+2026-06-03 12:25:10,409 | INFO | robo_stur | [DEBUG] Linha 0 texto: Vencimento Documento Parcela Dt.Emissão Localizador Valor Receber Valor Pagar Pagador / Beneficiário Moeda Câmbio Valor Oficial Vendas Início Término
+2026-06-03 12:25:10,415 | WARNING | robo_stur | Localizador HNJAXE não encontrado nos títulos
+2026-06-03 12:25:10,416 | INFO | robo_stur | Limpando filtros da tela de conferências
+2026-06-03 12:25:11,052 | INFO | robo_stur | Aguardando 3s | limpar search manualmente
+2026-06-03 12:25:14,057 | INFO | robo_stur | Buscando localizador nos títulos: GXMNCV
+2026-06-03 12:25:14,057 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-03 12:25:14,419 | INFO | robo_stur | Aguardando 3s | coluna Localizador selecionada
+2026-06-03 12:25:17,423 | INFO | robo_stur | Preenchendo search: GXMNCV
+2026-06-03 12:25:17,762 | INFO | robo_stur | Aguardando 3s | search limpo
+2026-06-03 12:25:21,079 | INFO | robo_stur | Aguardando 3s | search preenchido
+2026-06-03 12:25:24,088 | ERROR | robo_stur | Erro no processamento da conferência LATAM Clara 06/2026 - teste robo
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 73, in processar_latam_conferencia
+    encontrado, motivo = financeiro.buscar_e_selecionar_localizador(
+                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        localizador=transacao.localizador_extraido,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        valor_excel=transacao.valor_excel,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_financeiro_automation.py", line 408, in buscar_e_selecionar_localizador
+    self.preencher_search(localizador)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_financeiro_automation.py", line 131, in preencher_search
+    campo.press("Enter")
+    ~~~~~~~~~~~^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 17290, in press
+    self._sync(
+    ~~~~~~~~~~^
+        self._impl_obj.press(
+        ^^^^^^^^^^^^^^^^^^^^^
+            key=key, delay=delay, timeout=timeout, noWaitAfter=no_wait_after
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        )
+        ^
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 526, in press
+    return await self._frame.press(self._selector, strict=True, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 817, in press
+    await self._channel.send("press", self._timeout, locals_to_params(locals()))
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TargetClosedError: Locator.press: Target page, context or browser has been closed
+2026-06-03 12:25:24,093 | INFO | robo_stur | Limpando filtros da tela de conferências
+2026-06-03 12:25:24,094 | WARNING | robo_stur | Falha ao desmarcar Manter Pesquisa
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_financeiro_automation.py", line 85, in limpar_filtros_com_calma
+    if manter.count() > 0 and manter.first.is_checked():
+       ~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 16806, in count
+    return mapping.from_maybe_impl(self._sync(self._impl_obj.count()))
+                                   ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 406, in count
+    return await self._frame._query_count(self._selector)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 136, in _query_count
+    return await self._channel.send("queryCount", None, {"selector": selector})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TargetClosedError: Locator.count: Target page, context or browser has been closed
+2026-06-03 12:25:24,096 | WARNING | robo_stur | Falha ao clicar em limpar filtros
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_financeiro_automation.py", line 93, in limpar_filtros_com_calma
+    if botao_limpar.count() > 0:
+       ~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 16806, in count
+    return mapping.from_maybe_impl(self._sync(self._impl_obj.count()))
+                                   ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 406, in count
+    return await self._frame._query_count(self._selector)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 136, in _query_count
+    return await self._channel.send("queryCount", None, {"selector": selector})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TargetClosedError: Locator.count: Target page, context or browser has been closed
+2026-06-03 12:25:24,099 | WARNING | robo_stur | Falha ao limpar search manualmente
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_financeiro_automation.py", line 102, in limpar_filtros_com_calma
+    campo.fill("")
+    ~~~~~~~~~~^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 15919, in fill
+    self._sync(
+    ~~~~~~~~~~^
+        self._impl_obj.fill(
+        ^^^^^^^^^^^^^^^^^^^^
+            value=value, timeout=timeout, noWaitAfter=no_wait_after, force=force
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        )
+        ^
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 212, in fill
+    return await self._frame.fill(self._selector, strict=True, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 590, in fill
+    await self._fill(**locals_to_params(locals()))
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 602, in _fill
+    await self._channel.send("fill", self._timeout, locals_to_params(locals()))
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TargetClosedError: Locator.fill: Target page, context or browser has been closed
