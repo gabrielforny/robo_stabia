@@ -21,6 +21,7 @@ class Transacao:
     tipo_layout: str = "PADRAO"
     extrato_conta: str = ""
     data_fatura: str = ""
+    codigo_autorizacao: str = ""
 
 
 @dataclass(slots=True)
@@ -37,6 +38,7 @@ class CandidatoVenda:
     total_fornecedor: Decimal | None
     origem_busca: str
     texto_linha: str
+    status: str | None = None
 
 
 @dataclass(slots=True)

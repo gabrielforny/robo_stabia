@@ -1,0 +1,232 @@
+2026-06-05 18:35:33,856 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260605_183533.log
+2026-06-05 18:35:33,856 | INFO | robo_stur | Iniciando processamento — fluxo LATAM: Vendas + Conferências
+2026-06-05 18:35:33,856 | INFO | robo_stur | Arquivos recebidos: ['/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/CLARA MES 6.csv']
+2026-06-05 18:35:34,466 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-06-05 18:35:36,856 | INFO | robo_stur | Aguardando 3s — usuário preenchido
+2026-06-05 18:35:40,225 | INFO | robo_stur | Aguardando 3s — senha preenchida
+2026-06-05 18:35:44,053 | INFO | robo_stur | Aguardando 3s — login enviado
+2026-06-05 18:35:47,081 | WARNING | robo_stur | Sessão ativa detectada. Clicando em desbloquear usuário ativo...
+2026-06-05 18:35:47,416 | INFO | robo_stur | Aguardando 3s — usuário desbloqueado
+2026-06-05 18:35:50,418 | INFO | robo_stur | Login realizado.
+2026-06-05 18:35:50,419 | INFO | robo_stur | Acessando Operacional -> Vendas
+2026-06-05 18:35:50,792 | INFO | robo_stur | Aguardando 3s — hover no menu Operacional
+2026-06-05 18:35:54,209 | INFO | robo_stur | Aguardando 3s — tela de Vendas carregando
+2026-06-05 18:35:57,252 | INFO | robo_stur | Tela de Vendas pronta.
+2026-06-05 18:35:57,252 | INFO | robo_stur | Verificando coluna Localizador na tela de Vendas
+2026-06-05 18:35:57,283 | INFO | robo_stur | Coluna Localizador já visível na tela de Vendas
+2026-06-05 18:35:57,283 | INFO | robo_stur | Iniciando processamento do arquivo: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/CLARA MES 6.csv
+2026-06-05 18:35:57,293 | INFO | robo_stur | Aba/tipo carregado: CSV | Colunas: ['Data da Transação', 'Extrato da conta', 'Transação', 'Valor original', 'Moeda original', 'Valor em R$', 'Cartão', 'Alias Do Cartão', 'Status', 'Status de aprovação', 'Nome do aprovador', 'Nota do aprovador', 'Código de autorização', 'Categoria da Compra', 'Recibo', 'Nome dos Recibos', 'Titular', 'Grupos', 'Localização', 'Etiquetas', 'Descrição', 'IA - Possui fatura?', 'IA - Verificação de fatura', 'IA - Verificado por:', 'IA - Possui recibo?', 'IA - Verificação de recibo', 'IA - Verificado por:.1', 'IA - Possui outro documento?', 'IA - Nº da Fatura', 'IA - Nome legal', 'IA - CNPJ do emissor', 'IA - Data da compra', 'IA - Hora da compra', 'IA - Moeda do documento', 'IA - Valor subtotal', 'IA - Percentual da gorjeta', 'IA - Gorjeta R$', 'IA - Percentual de IVA', 'IA - Valor do IVA R$', 'IA - Valor total pago R$', 'IA - Lista de Compras (conceito, quantidade, preço por unidade, Desconto (se aplicável), preço total)']
+2026-06-05 18:35:57,305 | INFO | robo_stur | Total de linhas a processar: 49
+2026-06-05 18:35:57,305 | INFO | robo_stur | LATAM: 5 | Outros (ignorados nesta versão): 44
+2026-06-05 18:35:57,305 | INFO | robo_stur | === FASE 1: Vendas ===
+2026-06-05 18:35:57,305 | INFO | robo_stur | Buscando localizador nas Vendas: SQOZBP
+2026-06-05 18:35:57,305 | INFO | robo_stur | Estratégia LATAM: buscar Localizador=SQOZBP
+2026-06-05 18:35:57,305 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-06-05 18:35:57,317 | WARNING | robo_stur | Botão Limpar/Cancelar filtro não encontrado. Limpando campo search manualmente.
+2026-06-05 18:35:57,630 | INFO | robo_stur | Aguardando 3s — campo search limpo manualmente
+2026-06-05 18:36:00,652 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-05 18:36:01,065 | INFO | robo_stur | Aguardando 3s — coluna Localizador selecionada
+2026-06-05 18:36:04,069 | INFO | robo_stur | Preenchendo search com: SQOZBP
+2026-06-05 18:36:04,762 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-06-05 18:36:08,083 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-06-05 18:36:11,086 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-06-05 18:36:11,437 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-06-05 18:36:14,441 | INFO | robo_stur | Aguardando 3s — consulta por Localizador
+2026-06-05 18:36:17,448 | INFO | robo_stur | Validando resultados da tabela. Origem=Localizador
+2026-06-05 18:36:17,637 | INFO | robo_stur | Colunas detectadas: ['Ações_1', 'Ações_2', 'Ações_3', 'Ações_4', 'Ações_5', 'Ações_6', 'Ações_7', '__COLUNA_VAZIA_1', 'Venda', 'Situação', 'Cliente', 'CNPJ/CPF', 'Produto', 'Fornecedor', 'Fornecedor Serviço', 'CNPJ Fornecedor Serviço', 'Destino', 'Data de Emissão', 'Data de Confirmação', 'Emissor', 'Promotor', 'Coordenador', 'Auxiliar', 'Localizador', 'No. Confirmação', 'Seq. EBTA', 'Início', 'Término', 'Cód. Integração', 'File', 'C. de Custos Filial', 'Solicitante', 'Filial', 'C. de Custos Cliente', 'Setor Cliente', 'Projeto', 'Autorizador', 'Atividade', 'Total Cliente', 'Total Fornecedor', 'Número Pré-Venda', 'Id RM', 'Status Exp. RM', 'Tipo Cliente', 'Comis.AGT. Viagem', 'Grupo Cliente', 'Integração']
+2026-06-05 18:36:17,734 | INFO | robo_stur | Candidato coletado | Venda=00031289 | Fornecedor=LATAM | Forn.Serviço=LATAM | Emissão=18/05/2026 | Início=None | Término=None | TotalCliente=1446.52 | TotalFornecedor=1420.12
+2026-06-05 18:36:17,734 | INFO | robo_stur | Total de candidatos coletados: 1
+2026-06-05 18:36:17,735 | INFO | robo_stur | Localizador SQOZBP → Venda=00031289 | TotalForn=1420.12
+2026-06-05 18:36:17,735 | INFO | robo_stur | Venda validada. Status=normal | Venda=00031289 | Linha tabela=1
+2026-06-05 18:36:17,735 | INFO | robo_stur | Abrindo edição da venda na linha da tabela: 1
+2026-06-05 18:36:18,051 | INFO | robo_stur | Aguardando 3s — abrir tela de edição da venda
+2026-06-05 18:36:21,986 | INFO | robo_stur | Tela de edição da venda carregada.
+2026-06-05 18:36:21,986 | INFO | robo_stur | Abrindo edição do primeiro pagamento do fornecedor.
+2026-06-05 18:36:24,345 | INFO | robo_stur | Aguardando 3s — abrir modal de pagamento (tentativa 1)
+2026-06-05 18:36:27,369 | INFO | robo_stur | Modal de pagamento do fornecedor aberto.
+2026-06-05 18:36:27,369 | INFO | robo_stur | Selecionando forma de pagamento: Cartão de Crédito Agência.
+2026-06-05 18:36:27,696 | INFO | robo_stur | Aguardando 3s — forma Cartão de Crédito Agência selecionada
+2026-06-05 18:36:30,699 | INFO | robo_stur | Selecionando titular: Fabio Antununcio - CARTÃO DIGITAL.
+2026-06-05 18:36:31,042 | INFO | robo_stur | Aguardando 3s — titular do cartão selecionado
+2026-06-05 18:36:34,379 | INFO | robo_stur | Aguardando 3s — número do cartão sincronizado
+2026-06-05 18:36:37,401 | INFO | robo_stur | Cód. Autorização já preenchido ('595959'). Mantendo.
+2026-06-05 18:36:37,401 | INFO | robo_stur | Confirmando modal de pagamento no botão OK (vencimento mantido como está no STUR).
+2026-06-05 18:36:37,711 | INFO | robo_stur | Aguardando 3s — OK do pagamento clicado
+2026-06-05 18:36:40,721 | INFO | robo_stur | Gravando venda.
+2026-06-05 18:36:41,120 | INFO | robo_stur | Aguardando 3s — venda gravada
+2026-06-05 18:36:44,142 | INFO | robo_stur | STUR já retornou para a listagem automaticamente após gravar.
+2026-06-05 18:36:44,145 | INFO | robo_stur | Buscando localizador nas Vendas: HNJAXE
+2026-06-05 18:36:44,145 | INFO | robo_stur | Estratégia LATAM: buscar Localizador=HNJAXE
+2026-06-05 18:36:44,145 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-06-05 18:36:44,471 | INFO | robo_stur | Aguardando 3s — limpar filtros clicado
+2026-06-05 18:36:47,502 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-05 18:36:47,912 | INFO | robo_stur | Aguardando 3s — coluna Localizador selecionada
+2026-06-05 18:36:50,916 | INFO | robo_stur | Preenchendo search com: HNJAXE
+2026-06-05 18:36:51,596 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-06-05 18:36:54,922 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-06-05 18:36:57,927 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-06-05 18:36:58,334 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-06-05 18:37:01,338 | INFO | robo_stur | Aguardando 3s — consulta por Localizador
+2026-06-05 18:37:04,343 | INFO | robo_stur | Validando resultados da tabela. Origem=Localizador
+2026-06-05 18:37:04,526 | INFO | robo_stur | Colunas detectadas: ['Ações_1', 'Ações_2', 'Ações_3', 'Ações_4', 'Ações_5', 'Ações_6', 'Ações_7', '__COLUNA_VAZIA_1', 'Venda', 'Situação', 'Cliente', 'CNPJ/CPF', 'Produto', 'Fornecedor', 'Fornecedor Serviço', 'CNPJ Fornecedor Serviço', 'Destino', 'Data de Emissão', 'Data de Confirmação', 'Emissor', 'Promotor', 'Coordenador', 'Auxiliar', 'Localizador', 'No. Confirmação', 'Seq. EBTA', 'Início', 'Término', 'Cód. Integração', 'File', 'C. de Custos Filial', 'Solicitante', 'Filial', 'C. de Custos Cliente', 'Setor Cliente', 'Projeto', 'Autorizador', 'Atividade', 'Total Cliente', 'Total Fornecedor', 'Número Pré-Venda', 'Id RM', 'Status Exp. RM', 'Tipo Cliente', 'Comis.AGT. Viagem', 'Grupo Cliente', 'Integração']
+2026-06-05 18:37:04,624 | INFO | robo_stur | Candidato coletado | Venda=00031062 | Fornecedor=LATAM | Forn.Serviço=LATAM | Emissão=15/05/2026 | Início=None | Término=None | TotalCliente=4536.30 | TotalFornecedor=4509.90
+2026-06-05 18:37:04,624 | INFO | robo_stur | Total de candidatos coletados: 1
+2026-06-05 18:37:04,624 | INFO | robo_stur | Localizador HNJAXE → Venda=00031062 | TotalForn=4509.90
+2026-06-05 18:37:04,624 | INFO | robo_stur | Venda validada. Status=normal | Venda=00031062 | Linha tabela=1
+2026-06-05 18:37:04,624 | INFO | robo_stur | Abrindo edição da venda na linha da tabela: 1
+2026-06-05 18:37:04,940 | INFO | robo_stur | Aguardando 3s — abrir tela de edição da venda
+2026-06-05 18:37:08,779 | INFO | robo_stur | Tela de edição da venda carregada.
+2026-06-05 18:37:08,780 | INFO | robo_stur | Abrindo edição do primeiro pagamento do fornecedor.
+2026-06-05 18:37:11,130 | INFO | robo_stur | Aguardando 3s — abrir modal de pagamento (tentativa 1)
+2026-06-05 18:37:14,141 | INFO | robo_stur | Modal de pagamento do fornecedor aberto.
+2026-06-05 18:37:14,141 | INFO | robo_stur | Selecionando forma de pagamento: Cartão de Crédito Agência.
+2026-06-05 18:37:14,458 | INFO | robo_stur | Aguardando 3s — forma Cartão de Crédito Agência selecionada
+2026-06-05 18:37:17,461 | INFO | robo_stur | Selecionando titular: Fabio Antununcio - CARTÃO DIGITAL.
+2026-06-05 18:37:17,786 | INFO | robo_stur | Aguardando 3s — titular do cartão selecionado
+2026-06-05 18:37:19,584 | ERROR | robo_stur | Erro ao processar venda 00031062
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 85, in processar_latam_vendas
+    stur.seguir_fluxo_venda_ok(candidato_ok, codigo_autorizacao=transacao.codigo_autorizacao)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 485, in seguir_fluxo_venda_ok
+    self.preencher_pagamento_cartao_agencia(codigo_autorizacao=codigo_autorizacao)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 569, in preencher_pagamento_cartao_agencia
+    self.esperar("titular do cartão selecionado")
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 746, in esperar
+    self._page().wait_for_timeout(ESPERA_SEGUNDOS * 1000)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 11496, in wait_for_timeout
+    self._sync(self._impl_obj.wait_for_timeout(timeout=timeout))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_page.py", line 1103, in wait_for_timeout
+    await self._main_frame.wait_for_timeout(timeout)
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 844, in wait_for_timeout
+    await self._channel.send("waitForTimeout", None, {"waitTimeout": timeout})
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TargetClosedError: Page.wait_for_timeout: Target page, context or browser has been closed
+2026-06-05 18:37:19,592 | INFO | robo_stur | Buscando localizador nas Vendas: GXMNCV
+2026-06-05 18:37:19,592 | INFO | robo_stur | Estratégia LATAM: buscar Localizador=GXMNCV
+2026-06-05 18:37:19,592 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-06-05 18:37:19,594 | ERROR | robo_stur | Erro ao buscar localizador GXMNCV nas Vendas
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 46, in processar_latam_vendas
+    candidatos = stur.buscar_latam_por_localizador(transacao)
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 182, in buscar_latam_por_localizador
+    self.limpar_filtros_com_calma()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 376, in limpar_filtros_com_calma
+    self.desmarcar_manter_pesquisa()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 358, in desmarcar_manter_pesquisa
+    if checkbox.count() == 0:
+       ~~~~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 16806, in count
+    return mapping.from_maybe_impl(self._sync(self._impl_obj.count()))
+                                   ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 406, in count
+    return await self._frame._query_count(self._selector)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 136, in _query_count
+    return await self._channel.send("queryCount", None, {"selector": selector})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TargetClosedError: Locator.count: Target page, context or browser has been closed
+2026-06-05 18:37:19,595 | INFO | robo_stur | Buscando localizador nas Vendas: WGUQJO
+2026-06-05 18:37:19,595 | INFO | robo_stur | Estratégia LATAM: buscar Localizador=WGUQJO
+2026-06-05 18:37:19,595 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-06-05 18:37:19,596 | ERROR | robo_stur | Erro ao buscar localizador WGUQJO nas Vendas
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 46, in processar_latam_vendas
+    candidatos = stur.buscar_latam_por_localizador(transacao)
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 182, in buscar_latam_por_localizador
+    self.limpar_filtros_com_calma()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 376, in limpar_filtros_com_calma
+    self.desmarcar_manter_pesquisa()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 358, in desmarcar_manter_pesquisa
+    if checkbox.count() == 0:
+       ~~~~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 16806, in count
+    return mapping.from_maybe_impl(self._sync(self._impl_obj.count()))
+                                   ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 406, in count
+    return await self._frame._query_count(self._selector)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 136, in _query_count
+    return await self._channel.send("queryCount", None, {"selector": selector})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TargetClosedError: Locator.count: Target page, context or browser has been closed
+2026-06-05 18:37:19,598 | INFO | robo_stur | Buscando localizador nas Vendas: WIPOEV
+2026-06-05 18:37:19,598 | INFO | robo_stur | Estratégia LATAM: buscar Localizador=WIPOEV
+2026-06-05 18:37:19,598 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-06-05 18:37:19,600 | ERROR | robo_stur | Erro ao buscar localizador WIPOEV nas Vendas
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 46, in processar_latam_vendas
+    candidatos = stur.buscar_latam_por_localizador(transacao)
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 182, in buscar_latam_por_localizador
+    self.limpar_filtros_com_calma()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 376, in limpar_filtros_com_calma
+    self.desmarcar_manter_pesquisa()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 358, in desmarcar_manter_pesquisa
+    if checkbox.count() == 0:
+       ~~~~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 16806, in count
+    return mapping.from_maybe_impl(self._sync(self._impl_obj.count()))
+                                   ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 406, in count
+    return await self._frame._query_count(self._selector)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 136, in _query_count
+    return await self._channel.send("queryCount", None, {"selector": selector})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TargetClosedError: Locator.count: Target page, context or browser has been closed
+2026-06-05 18:37:19,990 | INFO | robo_stur | Backup parcial (pós Vendas) salvo em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/output/CLARA MES 6_processado.xlsx
+2026-06-05 18:37:19,990 | INFO | robo_stur | === FASE 2: Conferências ===
+2026-06-05 18:37:19,990 | INFO | robo_stur | Navegando para Conferências e Baixas por Conferência

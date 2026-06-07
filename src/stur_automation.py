@@ -10,6 +10,10 @@ from config import AppConfig
 from models import CandidatoVenda, Transacao
 
 
+class VendaJaFaturadaError(Exception):
+    pass
+
+
 SELECTORS = {
     # Login
     "login_usuario": "#c0_PH1_EdtUsuario",
@@ -40,9 +44,24 @@ SELECTORS = {
     "select_titular_cartao_agencia": "#c0_PH1_UFRPV1_UTCCRAG_Dbl",
     "select_numero_cartao_agencia": "#c0_PH1_UFRPV1_UCCRAG_Dbl",
     "data_vencimento_cartao_agencia": "#c0_PH1_UFRPV1_UPCCDV_Edt",
+    "codigo_autorizacao_pagamento": "#c0_PH1_UFRPV1_EdtCodAutCCRAG",
     "botao_ok_pagamento": "#c0_PH1_UFRPV1_BtnOKPag",
+    "novo_pagamento_fornecedor": "#c0_PH1_UFRPV1_ImgNovoPag",
+    "excluir_pagamento_fornecedor": "#c0_PH1_UFRPV1_GrdP input[id*='ImgExcluir']",
     "botao_gravar_venda": "#c0_PH1_URE1_BtnGravar",
     "botao_voltar_venda": "#c0_PH1_URE1_BtnCancelar",
+    "total_fornecedor_edicao": "#c0_PH1_ADT_EdtTotalFornec",
+
+    # Recebimento (fluxo FECHADA)
+    "grid_recebimentos": "#c0_PH1_UFRPV1_GrdR",
+    "editar_recebimento_linha": "#c0_PH1_UFRPV1_GrdR input[id*='ImgEditar']",
+    "radio_faturado_recebimento": "#c0_PH1_UFRPV1_RblFormaRec_1",
+    "botao_ok_recebimento": "#c0_PH1_UFRPV1_BtnOKRec",
+
+    # Tela de erro "já faturado"
+    "erro_ja_faturado": "#c0_PH1_Label5",
+    "voltar_apos_erro_faturado": "#c0_LnkRetorno",
+    "voltar_edicao_venda": "#c0_PH1_UsrRodapeEdicao1_BtnCancelar",
 }
 
 ESPERA_SEGUNDOS = 3
@@ -103,6 +122,31 @@ class SturAutomation:
                 self.esperar("usuário desbloqueado")
 
         self.logger.info("Login realizado.")
+
+    def garantir_coluna_localizador_visivel(self) -> None:
+        frame = self._frame()
+        self.logger.info("Verificando coluna Localizador na tela de Vendas")
+
+        col = frame.locator("#c0_PH1_GridView1 th").filter(has_text="Localizador")
+        if col.count() > 0 and col.first.is_visible():
+            self.logger.info("Coluna Localizador já visível na tela de Vendas")
+            return
+
+        self.logger.info("Habilitando coluna Localizador via ícone olho")
+        img_eye = frame.locator("#c0_PH1_UsrCabecLista1_ImgCustom")
+        img_eye.wait_for(state="visible", timeout=15000)
+        img_eye.click()
+        self.esperar("painel de colunas aberto")
+
+        chk_loc = frame.locator("#c0_PH1_ChkLoc")
+        chk_loc.wait_for(state="visible", timeout=10000)
+        if not chk_loc.is_checked():
+            chk_loc.check(force=True)
+            self.esperar("Localizador marcado")
+
+        img_eye.click()
+        self.esperar("painel de colunas fechado")
+        self.logger.info("Coluna Localizador habilitada com sucesso")
 
     def acessar_tela_vendas(self) -> None:
         page = self._page()
@@ -377,8 +421,27 @@ class SturAutomation:
             if qtd_celulas == 0:
                 continue
 
-            valores = [celulas.nth(j).inner_text().strip() for j in range(qtd_celulas)]
+            valores = [self._texto_celula(celulas.nth(j)) for j in range(qtd_celulas)]
             dados = self._mapear_linha_por_headers(headers, valores)
+
+            status_raw = (
+                self._valor_coluna(dados, "Status")
+                or self._valor_coluna(dados, "Situação")
+                or self._valor_coluna(dados, "Sit.")
+                or self._valor_coluna(dados, "Sit")
+            )
+
+            self.logger.info(
+                "Status bruto lido para Venda=%s: %r",
+                self._valor_coluna(dados, "Venda"),
+                status_raw,
+            )
+
+            # Fallback: se não houver coluna dedicada (ou célula com ícone), detecta pelo texto da linha
+            if not status_raw:
+                texto_linha_lower = " ".join(valores).lower()
+                if "fecha" in texto_linha_lower:
+                    status_raw = "FECHADA"
 
             candidato = CandidatoVenda(
                 indice_tabela=i,
@@ -393,11 +456,13 @@ class SturAutomation:
                 total_fornecedor=self._parse_valor_monetario(self._valor_coluna(dados, "Total Fornecedor")),
                 origem_busca=origem_busca,
                 texto_linha=" | ".join(valores),
+                status=status_raw.strip().upper() if status_raw else None,
             )
 
             self.logger.info(
-                "Candidato coletado | Venda=%s | Fornecedor=%s | Forn.Serviço=%s | Emissão=%s | Início=%s | Término=%s | TotalCliente=%s | TotalFornecedor=%s",
+                "Candidato coletado | Venda=%s | Status=%s | Fornecedor=%s | Forn.Serviço=%s | Emissão=%s | Início=%s | Término=%s | TotalCliente=%s | TotalFornecedor=%s",
                 candidato.codigo_venda,
+                candidato.status or "N/A",
                 candidato.fornecedor,
                 candidato.fornecedor_servico,
                 candidato.data_emissao,
@@ -412,33 +477,38 @@ class SturAutomation:
         self.logger.info("Total de candidatos coletados: %s", len(candidatos))
         return candidatos
 
-    def seguir_fluxo_venda_ok(self, candidato: CandidatoVenda, data_vencimento: str | None) -> None:
-        """
-        Fluxo executado somente quando a venda foi encontrada com valor confiável.
-
-        Passos:
-        - abrir o ícone Editar da linha encontrada na listagem;
-        - editar o primeiro pagamento do fornecedor;
-        - selecionar Cartão de Crédito Agência;
-        - selecionar Fabio Antununcio - CARTÃO DIGITAL;
-        - preencher Data de Vencimento da aba Capa;
-        - clicar OK;
-        - clicar Gravar;
-        - clicar Voltar para retornar à listagem.
-        """
-        if not data_vencimento:
-            raise ValueError("Data de vencimento da aba Capa não encontrada. Não vou alterar pagamento da venda.")
-
+    def seguir_fluxo_venda_ok(self, candidato: CandidatoVenda, codigo_autorizacao: str = "") -> None:
         self.logger.info(
-            "Venda validada. Iniciando alteração de pagamento | Venda=%s | Linha tabela=%s | Vencimento=%s",
+            "Venda validada. Status=%s | Venda=%s | Linha tabela=%s",
+            candidato.status or "normal",
             candidato.codigo_venda,
             candidato.indice_tabela,
-            data_vencimento,
         )
 
+        if candidato.status and "fechad" in candidato.status.lower():
+            self.seguir_fluxo_venda_fechada(candidato, codigo_autorizacao=codigo_autorizacao)
+        else:
+            self.abrir_edicao_venda(candidato)
+            self.editar_primeiro_pagamento_fornecedor()
+            self.preencher_pagamento_cartao_agencia(codigo_autorizacao=codigo_autorizacao)
+            self.gravar_venda_e_voltar()
+
+    def seguir_fluxo_venda_fechada(self, candidato: CandidatoVenda, codigo_autorizacao: str = "") -> None:
+        """
+        Fluxo para vendas FECHADAS:
+        1. Abre a edição da venda.
+        2. Exclui pagamentos de fornecedor existentes (se houver).
+        3. Edita o recebimento existente garantindo que esteja como Faturado.
+        4. Adiciona novo pagamento de fornecedor via botão +.
+        5. Preenche Cartão de Crédito Agência com os mesmos dados do fluxo normal.
+        6. Grava e volta.
+        """
+        self.logger.info("Iniciando fluxo FECHADA | Venda=%s", candidato.codigo_venda)
         self.abrir_edicao_venda(candidato)
-        self.editar_primeiro_pagamento_fornecedor()
-        self.preencher_pagamento_cartao_agencia(data_vencimento)
+        self._excluir_pagamentos_fornecedor_existentes()
+        self._garantir_recebimento_faturado()
+        self._abrir_novo_pagamento_fornecedor()
+        self.preencher_pagamento_cartao_agencia(codigo_autorizacao=codigo_autorizacao)
         self.gravar_venda_e_voltar()
 
     def abrir_edicao_venda(self, candidato: CandidatoVenda) -> None:
@@ -465,13 +535,33 @@ class SturAutomation:
 
         botao_editar_pagamento = frame.locator(SELECTORS["editar_pagamento_fornecedor"]).first
         botao_editar_pagamento.wait_for(state="visible", timeout=20000)
-        botao_editar_pagamento.click(force=True)
 
-        self.esperar("abrir modal de pagamento do fornecedor")
-        frame.locator(SELECTORS["modal_forma_pagamento"]).first.wait_for(state="visible", timeout=20000)
+        # Usa o botão OK dentro do modal como indicador de que está aberto
+        # (o container PnlFormaPag é class="modalPopup" e o Playwright o trata como hidden)
+        botao_ok_modal = frame.locator(SELECTORS["botao_ok_pagamento"]).first
+
+        for tentativa in range(1, 4):
+            # Verifica se o modal já está aberto antes de clicar
+            try:
+                botao_ok_modal.wait_for(state="visible", timeout=2000)
+                self.logger.info("Modal já está aberto (tentativa %d).", tentativa)
+                break
+            except PlaywrightTimeoutError:
+                pass
+
+            botao_editar_pagamento.click(force=True)
+            self.esperar(f"abrir modal de pagamento (tentativa {tentativa})")
+            try:
+                botao_ok_modal.wait_for(state="visible", timeout=5000)
+                break
+            except PlaywrightTimeoutError:
+                if tentativa == 3:
+                    raise
+                self.logger.warning("Modal não apareceu na tentativa %d. Tentando novamente...", tentativa)
+
         self.logger.info("Modal de pagamento do fornecedor aberto.")
 
-    def preencher_pagamento_cartao_agencia(self, data_vencimento: str) -> None:
+    def preencher_pagamento_cartao_agencia(self, codigo_autorizacao: str = "") -> None:
         frame = self._frame()
 
         self.logger.info("Selecionando forma de pagamento: Cartão de Crédito Agência.")
@@ -487,7 +577,6 @@ class SturAutomation:
         self.esperar("titular do cartão selecionado")
 
         # Em geral o STUR sincroniza o número do cartão ao selecionar o titular.
-        # Mantemos este fallback para garantir que o número correspondente também esteja selecionado.
         try:
             select_numero_cartao = frame.locator(SELECTORS["select_numero_cartao_agencia"]).first
             if select_numero_cartao.count() > 0:
@@ -496,17 +585,113 @@ class SturAutomation:
         except Exception as exc:
             self.logger.warning("Não consegui sincronizar select do número do cartão. Seguindo. Detalhe: %s", exc)
 
-        self.logger.info("Preenchendo vencimento do cartão: %s", data_vencimento)
-        campo_vencimento = frame.locator(SELECTORS["data_vencimento_cartao_agencia"]).first
-        campo_vencimento.wait_for(state="visible", timeout=20000)
-        campo_vencimento.click()
-        campo_vencimento.fill("")
-        campo_vencimento.fill(data_vencimento)
-        self.esperar("data de vencimento preenchida")
+        if codigo_autorizacao:
+            try:
+                campo_auth = frame.locator(SELECTORS["codigo_autorizacao_pagamento"]).first
+                campo_auth.wait_for(state="visible", timeout=5000)
+                valor_atual = campo_auth.input_value()
+                if valor_atual.strip():
+                    self.logger.info("Cód. Autorização já preenchido ('%s'). Mantendo.", valor_atual)
+                else:
+                    self.logger.info("Preenchendo Cód. Autorização: %s", codigo_autorizacao)
+                    campo_auth.click(force=True)
+                    campo_auth.fill(codigo_autorizacao)
+                    self.esperar("código de autorização preenchido")
+            except Exception as exc:
+                self.logger.warning("Não consegui preencher Cód. Autorização. Detalhe: %s", exc)
+        else:
+            self.logger.warning("Código de autorização não informado para esta transação.")
 
-        self.logger.info("Confirmando modal de pagamento no botão OK.")
+        self.logger.info("Confirmando modal de pagamento no botão OK (vencimento mantido como está no STUR).")
         frame.locator(SELECTORS["botao_ok_pagamento"]).first.click(force=True)
         self.esperar("OK do pagamento clicado")
+
+    def _excluir_pagamentos_fornecedor_existentes(self) -> None:
+        frame = self._frame()
+        self.logger.info("Verificando pagamentos de fornecedor existentes para excluir.")
+
+        for _ in range(10):
+            botoes = frame.locator(SELECTORS["excluir_pagamento_fornecedor"])
+            botao_visivel = None
+            for i in range(botoes.count()):
+                btn = botoes.nth(i)
+                try:
+                    btn.wait_for(state="visible", timeout=500)
+                    botao_visivel = btn
+                    break
+                except PlaywrightTimeoutError:
+                    continue
+
+            if botao_visivel is None:
+                break
+
+            self.logger.info("Excluindo pagamento de fornecedor existente.")
+            self._page().once("dialog", lambda d: d.accept())
+            botao_visivel.click(force=True)
+            self.esperar("pagamento fornecedor excluído")
+
+        self.logger.info("Pagamentos de fornecedor existentes removidos.")
+
+    def _garantir_recebimento_faturado(self) -> None:
+        frame = self._frame()
+        self.logger.info("Verificando recebimentos existentes.")
+
+        botoes_editar = frame.locator(SELECTORS["editar_recebimento_linha"])
+        botao_visivel = None
+        for i in range(botoes_editar.count()):
+            btn = botoes_editar.nth(i)
+            try:
+                btn.wait_for(state="visible", timeout=500)
+                botao_visivel = btn
+                break
+            except PlaywrightTimeoutError:
+                continue
+
+        if botao_visivel is None:
+            self.logger.info("Nenhum recebimento existente para editar.")
+            return
+
+        self.logger.info("Abrindo edição do recebimento existente.")
+        botao_ok_rec = frame.locator(SELECTORS["botao_ok_recebimento"]).first
+
+        try:
+            botao_ok_rec.wait_for(state="visible", timeout=2000)
+            self.logger.info("Modal de recebimento já aberto.")
+        except PlaywrightTimeoutError:
+            botao_visivel.click(force=True)
+            self.esperar("abrir modal recebimento")
+            botao_ok_rec.wait_for(state="visible", timeout=10000)
+
+        radio_faturado = frame.locator(SELECTORS["radio_faturado_recebimento"]).first
+        radio_faturado.wait_for(state="visible", timeout=5000)
+        if not radio_faturado.is_checked():
+            self.logger.info("Selecionando radio Faturado.")
+            radio_faturado.click(force=True)
+            self.esperar("Faturado selecionado")
+        else:
+            self.logger.info("Radio Faturado já selecionado.")
+
+        botao_ok_rec.click(force=True)
+        self.esperar("OK recebimento clicado")
+        self.logger.info("Recebimento ajustado para Faturado.")
+
+    def _abrir_novo_pagamento_fornecedor(self) -> None:
+        frame = self._frame()
+        self.logger.info("Abrindo novo pagamento do fornecedor via botão +.")
+
+        botao_ok_modal = frame.locator(SELECTORS["botao_ok_pagamento"]).first
+
+        try:
+            botao_ok_modal.wait_for(state="visible", timeout=2000)
+            self.logger.info("Modal de pagamento já aberto.")
+            return
+        except PlaywrightTimeoutError:
+            pass
+
+        frame.locator(SELECTORS["novo_pagamento_fornecedor"]).first.click(force=True)
+        self.esperar("novo pagamento aberto")
+        botao_ok_modal.wait_for(state="visible", timeout=10000)
+        self.logger.info("Modal de novo pagamento aberto.")
 
     def gravar_venda_e_voltar(self) -> None:
         frame = self._frame()
@@ -515,6 +700,39 @@ class SturAutomation:
         frame.locator(SELECTORS["botao_gravar_venda"]).first.wait_for(state="visible", timeout=20000)
         frame.locator(SELECTORS["botao_gravar_venda"]).first.click(force=True)
         self.esperar("venda gravada")
+
+        # Verifica se apareceu erro "Recebimento já faturado"
+        label_erro = frame.locator(SELECTORS["erro_ja_faturado"])
+        if label_erro.count() > 0:
+            try:
+                texto_erro = label_erro.first.inner_text(timeout=3000)
+            except Exception:
+                texto_erro = ""
+
+            if "faturado" in texto_erro.lower():
+                self.logger.warning("Venda já faturada. Navegando de volta. Mensagem: %s", texto_erro)
+
+                # LnkRetorno está dentro do iframe (prefixo c0_)
+                lnk = frame.locator(SELECTORS["voltar_apos_erro_faturado"]).first
+                lnk.wait_for(state="visible", timeout=10000)
+                lnk.click(force=True)
+                self.esperar("LnkRetorno clicado")
+
+                # Aguarda e clica no botão Voltar da tela de edição
+                frame.locator(SELECTORS["botao_voltar_venda"]).first.wait_for(state="visible", timeout=20000)
+                frame.locator(SELECTORS["botao_voltar_venda"]).first.click(force=True)
+                self.esperar("voltar para listagem após faturado")
+                self.aguardar_campo_busca()
+
+                raise VendaJaFaturadaError("Recebimento já faturado")
+
+        # STUR às vezes redireciona para a listagem automaticamente após gravar
+        try:
+            frame.locator(SELECTORS["campo_busca"]).first.wait_for(state="visible", timeout=3000)
+            self.logger.info("STUR já retornou para a listagem automaticamente após gravar.")
+            return
+        except PlaywrightTimeoutError:
+            pass
 
         self.logger.info("Voltando para a listagem de vendas.")
         frame.locator(SELECTORS["botao_voltar_venda"]).first.wait_for(state="visible", timeout=20000)
@@ -616,6 +834,24 @@ class SturAutomation:
             return Decimal(texto)
         except InvalidOperation:
             return None
+
+    def _texto_celula(self, celula) -> str:
+        """
+        Lê o texto de uma célula <td>. Quando a célula tem um <input type="submit">
+        (ex: botão de status "FECHADA"), inner_text() retorna vazio — nesse caso
+        usa o atributo value do input.
+        """
+        texto = celula.inner_text().strip()
+        if not texto:
+            try:
+                inp = celula.locator("input[value]").first
+                if inp.count() > 0:
+                    val = inp.get_attribute("value")
+                    if val:
+                        return val.strip()
+            except Exception:
+                pass
+        return texto
 
     def _normalizar(self, texto: str) -> str:
         return (

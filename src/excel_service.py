@@ -74,6 +74,7 @@ class ExcelService:
         coluna_valor = self._resolver_coluna_valor(df, tipo_layout=tipo_layout)
         coluna_vcn = self._resolver_coluna_vcn(df)
         coluna_extrato = self._resolver_coluna_extrato(df)
+        coluna_autorizacao = self._resolver_coluna_autorizacao(df)
 
         transacoes: list[Transacao] = []
 
@@ -96,6 +97,9 @@ class ExcelService:
                 codigo_venda_vcn=codigo_venda_vcn,
                 localizador_extraido=localizador_extraido,
             )
+            codigo_autorizacao = str(row.get(coluna_autorizacao, "") or "").strip() if coluna_autorizacao else ""
+            if codigo_autorizacao.lower() == "nan":
+                codigo_autorizacao = ""
 
             transacoes.append(
                 Transacao(
@@ -115,6 +119,7 @@ class ExcelService:
                     tipo_layout=tipo_layout,
                     extrato_conta=extrato_conta,
                     data_fatura=data_fatura,
+                    codigo_autorizacao=codigo_autorizacao,
                 )
             )
 
@@ -125,6 +130,16 @@ class ExcelService:
         if coluna not in df.columns:
             df[coluna] = ""
         df.at[transacao.indice_planilha, coluna] = resultado
+
+    def acrescentar_resultado(self, df: pd.DataFrame, transacao: Transacao, resultado: str) -> None:
+        coluna = self.config.coluna_resultado
+        if coluna not in df.columns:
+            df[coluna] = ""
+        atual = str(df.at[transacao.indice_planilha, coluna] or "").strip()
+        if atual and atual.lower() != "nan":
+            df.at[transacao.indice_planilha, coluna] = f"{atual} | {resultado}"
+        else:
+            df.at[transacao.indice_planilha, coluna] = resultado
 
     def salvar_saida(self, df: pd.DataFrame, arquivo_original: Path) -> Path:
         self.config.output_dir.mkdir(exist_ok=True)
@@ -140,10 +155,14 @@ class ExcelService:
         Layout esperado na fatura:
         Vencimento    22/04/2026
         """
+        import logging
+        log = logging.getLogger("robo_stur")
+
         if arquivo.suffix.lower() not in {".xlsx", ".xls"}:
             return None
 
         excel = pd.ExcelFile(arquivo)
+        log.info("[Capa] Abas encontradas: %s", excel.sheet_names)
         sheet_name = None
 
         for aba in excel.sheet_names:
@@ -152,26 +171,36 @@ class ExcelService:
                 break
 
         if sheet_name is None:
+            log.info("[Capa] Aba 'Capa' não encontrada; usando aba 0 (%s).", excel.sheet_names[0] if excel.sheet_names else "?")
             sheet_name = 0
 
         df_capa = pd.read_excel(arquivo, sheet_name=sheet_name, header=None, dtype=object)
+        log.info("[Capa] Lendo aba '%s' — shape %s", sheet_name, df_capa.shape)
 
         for row_idx in range(df_capa.shape[0]):
             for col_idx in range(df_capa.shape[1]):
                 valor = df_capa.iat[row_idx, col_idx]
-                if self._normalizar_texto(valor) == "vencimento":
+                normalizado = self._normalizar_texto(valor)
+                if "vencimento" in normalizado:
+                    log.info("[Capa] Célula com 'vencimento' em [%d,%d]: '%s'", row_idx, col_idx, valor)
                     # Primeiro tenta a célula ao lado.
                     if col_idx + 1 < df_capa.shape[1]:
-                        vencimento = self._formatar_data_saida(df_capa.iat[row_idx, col_idx + 1])
+                        prox = df_capa.iat[row_idx, col_idx + 1]
+                        log.info("[Capa] Célula adjacente [%d,%d]: '%s'", row_idx, col_idx + 1, prox)
+                        vencimento = self._formatar_data_saida(prox)
                         if vencimento:
+                            log.info("[Capa] Vencimento encontrado: %s", vencimento)
                             return vencimento
 
                     # Fallback: procura qualquer data na mesma linha.
                     for prox_col_idx in range(col_idx + 1, df_capa.shape[1]):
-                        vencimento = self._formatar_data_saida(df_capa.iat[row_idx, prox_col_idx])
+                        prox = df_capa.iat[row_idx, prox_col_idx]
+                        vencimento = self._formatar_data_saida(prox)
                         if vencimento:
+                            log.info("[Capa] Vencimento encontrado (fallback col %d): %s", prox_col_idx, vencimento)
                             return vencimento
 
+        log.warning("[Capa] Campo 'Vencimento' não encontrado na aba '%s'.", sheet_name)
         return None
 
     def _formatar_data_saida(self, valor) -> str | None:
@@ -374,6 +403,15 @@ class ExcelService:
     def _resolver_coluna_extrato(self, df: pd.DataFrame) -> str | None:
         candidatos = ["extrato da conta", "extrato", "periodo", "período", "period", "fatura"]
         return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="extrato da conta")
+
+    def _resolver_coluna_autorizacao(self, df: pd.DataFrame) -> str | None:
+        candidatos = [
+            "código de autorização", "codigo de autorizacao",
+            "cod. autorização", "cod autorizacao", "cod. autorizacao",
+            "código autorização", "codigo autorizacao",
+            "autorização", "autorizacao",
+        ]
+        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="código de autorização")
 
     def _converter_extrato_para_data_fatura(self, extrato: str) -> str:
         """

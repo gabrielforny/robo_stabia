@@ -1,0 +1,4 @@
+2026-06-05 18:35:09,188 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260605_183509.log
+2026-06-05 18:35:09,188 | INFO | robo_stur | Iniciando processamento — fluxo LATAM: Vendas + Conferências
+2026-06-05 18:35:09,188 | INFO | robo_stur | Arquivos recebidos: ['/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/CLARA MES 6.csv']
+2026-06-05 18:35:10,943 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx

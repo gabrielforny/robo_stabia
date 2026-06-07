@@ -1,0 +1,189 @@
+2026-06-07 18:45:33,312 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260607_184533.log
+2026-06-07 18:45:33,312 | INFO | robo_stur | Iniciando processamento — fluxo LATAM: Vendas + Conferências
+2026-06-07 18:45:33,312 | INFO | robo_stur | Arquivos recebidos: ['/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/CLARA MES 6.csv']
+2026-06-07 18:45:34,032 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-06-07 18:45:43,789 | INFO | robo_stur | Aguardando 3s — usuário preenchido
+2026-06-07 18:45:47,155 | INFO | robo_stur | Aguardando 3s — senha preenchida
+2026-06-07 18:45:51,102 | INFO | robo_stur | Aguardando 3s — login enviado
+2026-06-07 18:45:54,141 | WARNING | robo_stur | Sessão ativa detectada. Clicando em desbloquear usuário ativo...
+2026-06-07 18:45:54,471 | INFO | robo_stur | Aguardando 3s — usuário desbloqueado
+2026-06-07 18:45:57,475 | INFO | robo_stur | Login realizado.
+2026-06-07 18:45:57,475 | INFO | robo_stur | Acessando Operacional -> Vendas
+2026-06-07 18:45:57,853 | INFO | robo_stur | Aguardando 3s — hover no menu Operacional
+2026-06-07 18:46:01,258 | INFO | robo_stur | Aguardando 3s — tela de Vendas carregando
+2026-06-07 18:46:04,289 | INFO | robo_stur | Tela de Vendas pronta.
+2026-06-07 18:46:04,290 | INFO | robo_stur | Verificando coluna Localizador na tela de Vendas
+2026-06-07 18:46:04,310 | INFO | robo_stur | Coluna Localizador já visível na tela de Vendas
+2026-06-07 18:46:04,310 | INFO | robo_stur | Iniciando processamento do arquivo: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/CLARA MES 6.csv
+2026-06-07 18:46:04,323 | INFO | robo_stur | Aba/tipo carregado: CSV | Colunas: ['Data da Transação', 'Extrato da conta', 'Transação', 'Valor original', 'Moeda original', 'Valor em R$', 'Cartão', 'Alias Do Cartão', 'Status', 'Status de aprovação', 'Nome do aprovador', 'Nota do aprovador', 'Código de autorização', 'Categoria da Compra', 'Recibo', 'Nome dos Recibos', 'Titular', 'Grupos', 'Localização', 'Etiquetas', 'Descrição', 'IA - Possui fatura?', 'IA - Verificação de fatura', 'IA - Verificado por:', 'IA - Possui recibo?', 'IA - Verificação de recibo', 'IA - Verificado por:.1', 'IA - Possui outro documento?', 'IA - Nº da Fatura', 'IA - Nome legal', 'IA - CNPJ do emissor', 'IA - Data da compra', 'IA - Hora da compra', 'IA - Moeda do documento', 'IA - Valor subtotal', 'IA - Percentual da gorjeta', 'IA - Gorjeta R$', 'IA - Percentual de IVA', 'IA - Valor do IVA R$', 'IA - Valor total pago R$', 'IA - Lista de Compras (conceito, quantidade, preço por unidade, Desconto (se aplicável), preço total)']
+2026-06-07 18:46:04,334 | INFO | robo_stur | Total de linhas a processar: 49
+2026-06-07 18:46:04,334 | INFO | robo_stur | LATAM: 5 | Outros (ignorados nesta versão): 44
+2026-06-07 18:46:04,334 | INFO | robo_stur | === FASE 1: Vendas ===
+2026-06-07 18:46:04,334 | INFO | robo_stur | Buscando localizador nas Vendas: SQOZBP
+2026-06-07 18:46:04,334 | INFO | robo_stur | Estratégia LATAM: buscar Localizador=SQOZBP
+2026-06-07 18:46:04,334 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-06-07 18:46:04,343 | WARNING | robo_stur | Botão Limpar/Cancelar filtro não encontrado. Limpando campo search manualmente.
+2026-06-07 18:46:04,651 | INFO | robo_stur | Aguardando 3s — campo search limpo manualmente
+2026-06-07 18:46:07,668 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-07 18:46:08,077 | INFO | robo_stur | Aguardando 3s — coluna Localizador selecionada
+2026-06-07 18:46:11,081 | INFO | robo_stur | Preenchendo search com: SQOZBP
+2026-06-07 18:46:11,776 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-06-07 18:46:15,097 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-06-07 18:46:18,101 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-06-07 18:46:18,461 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-06-07 18:46:21,465 | INFO | robo_stur | Aguardando 3s — consulta por Localizador
+2026-06-07 18:46:24,472 | INFO | robo_stur | Validando resultados da tabela. Origem=Localizador
+2026-06-07 18:46:24,659 | INFO | robo_stur | Colunas detectadas: ['Ações_1', 'Ações_2', 'Ações_3', 'Ações_4', 'Ações_5', 'Ações_6', 'Ações_7', '__COLUNA_VAZIA_1', 'Venda', 'Situação', 'Cliente', 'CNPJ/CPF', 'Produto', 'Fornecedor', 'Fornecedor Serviço', 'CNPJ Fornecedor Serviço', 'Destino', 'Data de Emissão', 'Data de Confirmação', 'Emissor', 'Promotor', 'Coordenador', 'Auxiliar', 'Localizador', 'No. Confirmação', 'Seq. EBTA', 'Início', 'Término', 'Cód. Integração', 'File', 'C. de Custos Filial', 'Solicitante', 'Filial', 'C. de Custos Cliente', 'Setor Cliente', 'Projeto', 'Autorizador', 'Atividade', 'Total Cliente', 'Total Fornecedor', 'Número Pré-Venda', 'Id RM', 'Status Exp. RM', 'Tipo Cliente', 'Comis.AGT. Viagem', 'Grupo Cliente', 'Integração']
+2026-06-07 18:46:24,799 | INFO | robo_stur | Status bruto lido para Venda=00031289: 'FECHADA'
+2026-06-07 18:46:24,799 | INFO | robo_stur | Candidato coletado | Venda=00031289 | Status=FECHADA | Fornecedor=LATAM | Forn.Serviço=LATAM | Emissão=18/05/2026 | Início=None | Término=None | TotalCliente=1446.52 | TotalFornecedor=1420.12
+2026-06-07 18:46:24,799 | INFO | robo_stur | Total de candidatos coletados: 1
+2026-06-07 18:46:24,800 | INFO | robo_stur | Localizador SQOZBP → Venda=00031289 | TotalForn=1420.12
+2026-06-07 18:46:24,800 | INFO | robo_stur | Venda validada. Status=FECHADA | Venda=00031289 | Linha tabela=1
+2026-06-07 18:46:24,800 | INFO | robo_stur | Iniciando fluxo FECHADA | Venda=00031289
+2026-06-07 18:46:24,800 | INFO | robo_stur | Abrindo edição da venda na linha da tabela: 1
+2026-06-07 18:46:25,119 | INFO | robo_stur | Aguardando 3s — abrir tela de edição da venda
+2026-06-07 18:46:31,535 | INFO | robo_stur | Tela de edição da venda carregada.
+2026-06-07 18:46:31,535 | INFO | robo_stur | Verificando pagamentos de fornecedor existentes para excluir.
+2026-06-07 18:46:31,544 | INFO | robo_stur | Excluindo pagamento de fornecedor existente.
+2026-06-07 18:46:31,864 | INFO | robo_stur | Aguardando 3s — pagamento fornecedor excluído
+2026-06-07 18:46:34,873 | INFO | robo_stur | Pagamentos de fornecedor existentes removidos.
+2026-06-07 18:46:34,873 | INFO | robo_stur | Verificando recebimentos existentes.
+2026-06-07 18:46:34,880 | INFO | robo_stur | Abrindo edição do recebimento existente.
+2026-06-07 18:46:37,225 | INFO | robo_stur | Aguardando 3s — abrir modal recebimento
+2026-06-07 18:46:40,266 | INFO | robo_stur | Radio Faturado já selecionado.
+2026-06-07 18:46:40,582 | INFO | robo_stur | Aguardando 3s — OK recebimento clicado
+2026-06-07 18:46:43,587 | INFO | robo_stur | Recebimento ajustado para Faturado.
+2026-06-07 18:46:43,588 | INFO | robo_stur | Abrindo novo pagamento do fornecedor via botão +.
+2026-06-07 18:46:45,923 | INFO | robo_stur | Aguardando 3s — novo pagamento aberto
+2026-06-07 18:46:48,948 | INFO | robo_stur | Modal de novo pagamento aberto.
+2026-06-07 18:46:48,948 | INFO | robo_stur | Selecionando forma de pagamento: Cartão de Crédito Agência.
+2026-06-07 18:46:49,270 | INFO | robo_stur | Aguardando 3s — forma Cartão de Crédito Agência selecionada
+2026-06-07 18:46:52,275 | INFO | robo_stur | Selecionando titular: Fabio Antununcio - CARTÃO DIGITAL.
+2026-06-07 18:46:52,607 | INFO | robo_stur | Aguardando 3s — titular do cartão selecionado
+2026-06-07 18:46:55,937 | INFO | robo_stur | Aguardando 3s — número do cartão sincronizado
+2026-06-07 18:46:58,983 | INFO | robo_stur | Preenchendo Cód. Autorização: 837080
+2026-06-07 18:46:59,613 | INFO | robo_stur | Aguardando 3s — código de autorização preenchido
+2026-06-07 18:47:02,619 | INFO | robo_stur | Confirmando modal de pagamento no botão OK (vencimento mantido como está no STUR).
+2026-06-07 18:47:02,959 | INFO | robo_stur | Aguardando 3s — OK do pagamento clicado
+2026-06-07 18:47:05,964 | INFO | robo_stur | Gravando venda.
+2026-06-07 18:47:06,356 | INFO | robo_stur | Aguardando 3s — venda gravada
+2026-06-07 18:47:09,396 | INFO | robo_stur | STUR já retornou para a listagem automaticamente após gravar.
+2026-06-07 18:47:09,399 | INFO | robo_stur | Buscando localizador nas Vendas: HNJAXE
+2026-06-07 18:47:09,399 | INFO | robo_stur | Estratégia LATAM: buscar Localizador=HNJAXE
+2026-06-07 18:47:09,399 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-06-07 18:47:09,721 | INFO | robo_stur | Aguardando 3s — limpar filtros clicado
+2026-06-07 18:47:12,748 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-07 18:47:13,105 | INFO | robo_stur | Aguardando 3s — coluna Localizador selecionada
+2026-06-07 18:47:16,109 | INFO | robo_stur | Preenchendo search com: HNJAXE
+2026-06-07 18:47:16,797 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-06-07 18:47:20,119 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-06-07 18:47:23,124 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-06-07 18:47:23,532 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-06-07 18:47:26,539 | INFO | robo_stur | Aguardando 3s — consulta por Localizador
+2026-06-07 18:47:29,543 | INFO | robo_stur | Validando resultados da tabela. Origem=Localizador
+2026-06-07 18:47:29,726 | INFO | robo_stur | Colunas detectadas: ['Ações_1', 'Ações_2', 'Ações_3', 'Ações_4', 'Ações_5', 'Ações_6', 'Ações_7', '__COLUNA_VAZIA_1', 'Venda', 'Situação', 'Cliente', 'CNPJ/CPF', 'Produto', 'Fornecedor', 'Fornecedor Serviço', 'CNPJ Fornecedor Serviço', 'Destino', 'Data de Emissão', 'Data de Confirmação', 'Emissor', 'Promotor', 'Coordenador', 'Auxiliar', 'Localizador', 'No. Confirmação', 'Seq. EBTA', 'Início', 'Término', 'Cód. Integração', 'File', 'C. de Custos Filial', 'Solicitante', 'Filial', 'C. de Custos Cliente', 'Setor Cliente', 'Projeto', 'Autorizador', 'Atividade', 'Total Cliente', 'Total Fornecedor', 'Número Pré-Venda', 'Id RM', 'Status Exp. RM', 'Tipo Cliente', 'Comis.AGT. Viagem', 'Grupo Cliente', 'Integração']
+2026-06-07 18:47:29,858 | INFO | robo_stur | Status bruto lido para Venda=00031062: 'FECHADA'
+2026-06-07 18:47:29,859 | INFO | robo_stur | Candidato coletado | Venda=00031062 | Status=FECHADA | Fornecedor=LATAM | Forn.Serviço=LATAM | Emissão=15/05/2026 | Início=None | Término=None | TotalCliente=4536.30 | TotalFornecedor=4509.90
+2026-06-07 18:47:29,859 | INFO | robo_stur | Total de candidatos coletados: 1
+2026-06-07 18:47:29,859 | INFO | robo_stur | Localizador HNJAXE → Venda=00031062 | TotalForn=4509.90
+2026-06-07 18:47:29,859 | INFO | robo_stur | Venda validada. Status=FECHADA | Venda=00031062 | Linha tabela=1
+2026-06-07 18:47:29,859 | INFO | robo_stur | Iniciando fluxo FECHADA | Venda=00031062
+2026-06-07 18:47:29,859 | INFO | robo_stur | Abrindo edição da venda na linha da tabela: 1
+2026-06-07 18:47:30,174 | INFO | robo_stur | Aguardando 3s — abrir tela de edição da venda
+2026-06-07 18:47:34,020 | INFO | robo_stur | Tela de edição da venda carregada.
+2026-06-07 18:47:34,020 | INFO | robo_stur | Verificando pagamentos de fornecedor existentes para excluir.
+2026-06-07 18:47:34,033 | INFO | robo_stur | Excluindo pagamento de fornecedor existente.
+2026-06-07 18:47:34,341 | INFO | robo_stur | Aguardando 3s — pagamento fornecedor excluído
+2026-06-07 18:47:37,362 | INFO | robo_stur | Pagamentos de fornecedor existentes removidos.
+2026-06-07 18:47:37,363 | INFO | robo_stur | Verificando recebimentos existentes.
+2026-06-07 18:47:37,380 | INFO | robo_stur | Abrindo edição do recebimento existente.
+2026-06-07 18:47:39,722 | INFO | robo_stur | Aguardando 3s — abrir modal recebimento
+2026-06-07 18:47:42,764 | INFO | robo_stur | Radio Faturado já selecionado.
+2026-06-07 18:47:43,077 | INFO | robo_stur | Aguardando 3s — OK recebimento clicado
+2026-06-07 18:47:46,083 | INFO | robo_stur | Recebimento ajustado para Faturado.
+2026-06-07 18:47:46,083 | INFO | robo_stur | Abrindo novo pagamento do fornecedor via botão +.
+2026-06-07 18:47:48,419 | INFO | robo_stur | Aguardando 3s — novo pagamento aberto
+2026-06-07 18:47:51,443 | INFO | robo_stur | Modal de novo pagamento aberto.
+2026-06-07 18:47:51,444 | INFO | robo_stur | Selecionando forma de pagamento: Cartão de Crédito Agência.
+2026-06-07 18:47:51,764 | INFO | robo_stur | Aguardando 3s — forma Cartão de Crédito Agência selecionada
+2026-06-07 18:47:54,769 | INFO | robo_stur | Selecionando titular: Fabio Antununcio - CARTÃO DIGITAL.
+2026-06-07 18:47:55,109 | INFO | robo_stur | Aguardando 3s — titular do cartão selecionado
+2026-06-07 18:47:58,443 | INFO | robo_stur | Aguardando 3s — número do cartão sincronizado
+2026-06-07 18:48:01,468 | INFO | robo_stur | Preenchendo Cód. Autorização: 778905
+2026-06-07 18:48:02,099 | INFO | robo_stur | Aguardando 3s — código de autorização preenchido
+2026-06-07 18:48:05,104 | INFO | robo_stur | Confirmando modal de pagamento no botão OK (vencimento mantido como está no STUR).
+2026-06-07 18:48:05,439 | INFO | robo_stur | Aguardando 3s — OK do pagamento clicado
+2026-06-07 18:48:08,443 | INFO | robo_stur | Gravando venda.
+2026-06-07 18:48:08,831 | INFO | robo_stur | Aguardando 3s — venda gravada
+2026-06-07 18:48:11,871 | WARNING | robo_stur | Venda já faturada. Navegando de volta. Mensagem: Problemas na gravação: Alteração e exclusão da forma de recebimento não permitidos: Recebimento já faturado.
+2026-06-07 18:48:12,236 | INFO | robo_stur | Aguardando 3s — retorno após erro faturado
+2026-06-07 18:48:35,247 | ERROR | robo_stur | Erro ao processar venda 00031062
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 85, in processar_latam_vendas
+    stur.seguir_fluxo_venda_ok(candidato_ok, codigo_autorizacao=transacao.codigo_autorizacao)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 489, in seguir_fluxo_venda_ok
+    self.seguir_fluxo_venda_fechada(candidato, codigo_autorizacao=codigo_autorizacao)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 512, in seguir_fluxo_venda_fechada
+    self.gravar_venda_e_voltar()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 722, in gravar_venda_e_voltar
+    frame.locator(SELECTORS["voltar_edicao_venda"]).first.wait_for(state="visible", timeout=20000)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 18005, in wait_for
+    self._sync(self._impl_obj.wait_for(timeout=timeout, state=state))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 692, in wait_for
+    await self._frame.wait_for_selector(
+        self._selector, strict=True, timeout=timeout, state=state
+    )
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 369, in wait_for_selector
+    await self._channel.send(
+        "waitForSelector", self._timeout, locals_to_params(locals())
+    )
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/.venv/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Locator.wait_for: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("#sturweb").content_frame.locator("#c0_PH1_UsrRodapeEdicao1_BtnCancelar").first to be visible
+
+2026-06-07 18:48:35,251 | INFO | robo_stur | Buscando localizador nas Vendas: GXMNCV
+2026-06-07 18:48:35,251 | INFO | robo_stur | Estratégia LATAM: buscar Localizador=GXMNCV
+2026-06-07 18:48:35,251 | INFO | robo_stur | Limpando filtros para começar próximo passo/item
+2026-06-07 18:48:35,275 | WARNING | robo_stur | Botão Limpar/Cancelar filtro não encontrado. Limpando campo search manualmente.
+2026-06-07 18:48:42,766 | INFO | robo_stur | Clicando na coluna: Localizador
+2026-06-07 18:48:43,112 | INFO | robo_stur | Aguardando 3s — coluna Localizador selecionada
+2026-06-07 18:48:46,116 | INFO | robo_stur | Preenchendo search com: GXMNCV
+2026-06-07 18:48:46,786 | INFO | robo_stur | Aguardando 3s — campo search limpo
+2026-06-07 18:48:50,107 | INFO | robo_stur | Aguardando 3s — campo search preenchido
+2026-06-07 18:48:53,111 | INFO | robo_stur | Clicando no botão de pesquisar
+2026-06-07 18:48:53,473 | INFO | robo_stur | Aguardando 3s — pesquisa enviada
+2026-06-07 18:48:56,477 | INFO | robo_stur | Aguardando 3s — consulta por Localizador
+2026-06-07 18:48:59,481 | INFO | robo_stur | Validando resultados da tabela. Origem=Localizador
+2026-06-07 18:48:59,655 | INFO | robo_stur | Colunas detectadas: ['Ações_1', 'Ações_2', 'Ações_3', 'Ações_4', 'Ações_5', 'Ações_6', 'Ações_7', '__COLUNA_VAZIA_1', 'Venda', 'Situação', 'Cliente', 'CNPJ/CPF', 'Produto', 'Fornecedor', 'Fornecedor Serviço', 'CNPJ Fornecedor Serviço', 'Destino', 'Data de Emissão', 'Data de Confirmação', 'Emissor', 'Promotor', 'Coordenador', 'Auxiliar', 'Localizador', 'No. Confirmação', 'Seq. EBTA', 'Início', 'Término', 'Cód. Integração', 'File', 'C. de Custos Filial', 'Solicitante', 'Filial', 'C. de Custos Cliente', 'Setor Cliente', 'Projeto', 'Autorizador', 'Atividade', 'Total Cliente', 'Total Fornecedor', 'Número Pré-Venda', 'Id RM', 'Status Exp. RM', 'Tipo Cliente', 'Comis.AGT. Viagem', 'Grupo Cliente', 'Integração']
+2026-06-07 18:48:59,777 | INFO | robo_stur | Status bruto lido para Venda=00031211: 'FECHADA'
+2026-06-07 18:48:59,777 | INFO | robo_stur | Candidato coletado | Venda=00031211 | Status=FECHADA | Fornecedor=LATAM | Forn.Serviço=LATAM | Emissão=15/05/2026 | Início=None | Término=None | TotalCliente=3396.78 | TotalFornecedor=3370.38
+2026-06-07 18:48:59,777 | INFO | robo_stur | Total de candidatos coletados: 1
+2026-06-07 18:48:59,777 | INFO | robo_stur | Localizador GXMNCV → Venda=00031211 | TotalForn=3370.38
+2026-06-07 18:48:59,777 | INFO | robo_stur | Venda validada. Status=FECHADA | Venda=00031211 | Linha tabela=1
+2026-06-07 18:48:59,777 | INFO | robo_stur | Iniciando fluxo FECHADA | Venda=00031211
+2026-06-07 18:48:59,777 | INFO | robo_stur | Abrindo edição da venda na linha da tabela: 1
+2026-06-07 18:49:00,123 | INFO | robo_stur | Aguardando 3s — abrir tela de edição da venda
+2026-06-07 18:49:03,956 | INFO | robo_stur | Tela de edição da venda carregada.
+2026-06-07 18:49:03,956 | INFO | robo_stur | Verificando pagamentos de fornecedor existentes para excluir.
+2026-06-07 18:49:03,968 | INFO | robo_stur | Excluindo pagamento de fornecedor existente.
+2026-06-07 18:49:04,278 | INFO | robo_stur | Aguardando 3s — pagamento fornecedor excluído
+2026-06-07 18:49:07,304 | INFO | robo_stur | Pagamentos de fornecedor existentes removidos.
+2026-06-07 18:49:07,304 | INFO | robo_stur | Verificando recebimentos existentes.
+2026-06-07 18:49:07,309 | INFO | robo_stur | Nenhum recebimento existente para editar.
+2026-06-07 18:49:07,309 | INFO | robo_stur | Abrindo novo pagamento do fornecedor via botão +.
