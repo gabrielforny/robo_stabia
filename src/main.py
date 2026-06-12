@@ -13,6 +13,8 @@ from stur_financeiro_automation import SturFinanceiroAutomation
 
 EXTENSOES_SUPORTADAS = {".xlsx", ".xls", ".csv"}
 
+PASTA_AUTOMACAO_STUR = Path.home() / "Documents" / "automacao-stur"
+
 
 # ==========================================================
 # FASE 1 — VENDAS (Operacional → Vendas)
@@ -134,8 +136,8 @@ def processar_latam_conferencia(
 
     for chave_mes, grupo in grupos.items():
         # TODO: remover sufixo quando sair de testes
-        descricao_busca = f"Clara {chave_mes} - teste robo"
-        descricao_criar = f"Clara {chave_mes} - teste robo"
+        descricao_busca = f"Clara {chave_mes}"
+        descricao_criar = f"Clara {chave_mes}"
         data_fatura = grupo[0].data_fatura
 
         logger.info("Processando conferência LATAM: %s | %d item(ns)", descricao_busca, len(grupo))
@@ -230,6 +232,7 @@ def processar_arquivo_aberto(
 
         arquivo_parcial = excel_service.salvar_saida(df, arquivo)
         logger.info("Backup parcial (pós Vendas) salvo em: %s", arquivo_parcial)
+        excel_service.salvar_no_local_com_cores(df, arquivo)
 
         # Fase 2: Conferências
         logger.info("=== FASE 2: Conferências ===")
@@ -242,7 +245,8 @@ def processar_arquivo_aberto(
             logger=logger,
         )
 
-    arquivo_saida = excel_service.salvar_saida(df, arquivo)
+    excel_service.salvar_saida(df, arquivo)
+    arquivo_saida = excel_service.salvar_no_local_com_cores(df, arquivo)
     logger.info("Arquivo final salvo: %s", arquivo_saida)
 
     return ResultadoProcessamento(
@@ -323,6 +327,13 @@ def resolver_arquivos(args) -> list[Path]:
     if args.pasta:
         return listar_arquivos_da_pasta(Path(args.pasta))
 
+    # Padrão: pasta ~/Documents/automacao-stur — pega só o arquivo mais recente
+    if PASTA_AUTOMACAO_STUR.exists():
+        arquivos = listar_arquivos_da_pasta(PASTA_AUTOMACAO_STUR)
+        if arquivos:
+            return [arquivos[-1]]
+
+    # Fallback: pasta input/ do projeto
     pasta_input = Path(__file__).resolve().parent.parent / "input"
     arquivos_input = listar_arquivos_da_pasta(pasta_input)
     if arquivos_input:

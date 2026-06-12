@@ -3,9 +3,15 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import pandas as pd
+import openpyxl
+from openpyxl.styles import PatternFill
 
 from config import AppConfig
 from models import Transacao
+
+_GREEN_FILL = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+_RED_FILL = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+_ORANGE_FILL = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
 
 MESES_PT = {
     "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04",
@@ -78,10 +84,19 @@ class ExcelService:
 
         transacoes: list[Transacao] = []
 
+        coluna_res = self.config.coluna_resultado
         for index, row in df.iterrows():
             estabelecimento = str(row.get(coluna_estabelecimento, "") or "").strip()
             if not estabelecimento or estabelecimento.lower() == "nan":
                 continue
+
+            # Pula linhas já processadas com sucesso (OK ou JÁ FATURADO)
+            if coluna_res in df.columns:
+                resultado_existente = str(row.get(coluna_res, "") or "").strip()
+                if resultado_existente and resultado_existente.lower() not in ("", "nan"):
+                    r = resultado_existente.upper()
+                    if r.startswith("OK") or "FATURADO" in r:
+                        continue
 
             data_excel = str(row.get(coluna_data, "") or "").strip() if coluna_data else ""
             data_stur = converter_data_excel_para_stur(data_excel)
@@ -145,6 +160,53 @@ class ExcelService:
         self.config.output_dir.mkdir(exist_ok=True)
         saida = self.config.output_dir / f"{arquivo_original.stem}_processado.xlsx"
         df.to_excel(saida, index=False)
+        return saida
+
+    def salvar_no_local_com_cores(self, df: pd.DataFrame, arquivo_original: Path) -> Path:
+        """
+        Salva o DataFrame com cores de linha de volta na pasta de origem:
+          - verde  → linha com resultado OK
+          - vermelho → linha com resultado ERRO
+          - laranja → linha JÁ FATURADO
+
+        Se o arquivo original for CSV, salva como .xlsx de mesmo nome na mesma pasta.
+        """
+        pasta = arquivo_original.parent
+        pasta.mkdir(parents=True, exist_ok=True)
+
+        if arquivo_original.suffix.lower() == ".csv":
+            saida = pasta / (arquivo_original.stem + ".xlsx")
+        else:
+            saida = arquivo_original
+
+        df.to_excel(saida, index=False, engine="openpyxl")
+
+        wb = openpyxl.load_workbook(saida)
+        ws = wb.active
+
+        header = [str(cell.value or "").strip() for cell in ws[1]]
+        coluna = self.config.coluna_resultado
+        try:
+            col_idx = header.index(coluna) + 1  # 1-based
+        except ValueError:
+            wb.save(saida)
+            return saida
+
+        for row_idx in range(2, ws.max_row + 1):
+            resultado = str(ws.cell(row=row_idx, column=col_idx).value or "").strip().upper()
+            if resultado.startswith("OK"):
+                fill = _GREEN_FILL
+            elif resultado.startswith("ERRO"):
+                fill = _RED_FILL
+            elif "FATURADO" in resultado:
+                fill = _ORANGE_FILL
+            else:
+                continue
+
+            for c in range(1, ws.max_column + 1):
+                ws.cell(row=row_idx, column=c).fill = fill
+
+        wb.save(saida)
         return saida
 
 
