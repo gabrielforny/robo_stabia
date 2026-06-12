@@ -110,6 +110,21 @@ class App(tk.Tk):
 
     def _run(self):
         try:
+            # Quando rodando como .exe empacotado, o Playwright extrai seus arquivos numa
+            # pasta temporária mas precisa encontrar o Chromium onde foi instalado de fato.
+            if getattr(sys, "frozen", False):
+                import os
+                import platform
+                if platform.system() == "Windows":
+                    localappdata = os.environ.get("LOCALAPPDATA") or str(
+                        Path.home() / "AppData" / "Local"
+                    )
+                    browsers_path = Path(localappdata) / "ms-playwright"
+                else:
+                    browsers_path = Path.home() / ".cache" / "ms-playwright"
+                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(browsers_path)
+                self._log(f"Browsers Playwright em: {browsers_path}", "INFO")
+
             self._garantir_playwright()
 
             from config import load_config, _base_dir_padrao
