@@ -1,0 +1,41 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Instalar Chromium (para empacotar junto)
+        run: playwright install chromium
+
+      - name: Gerar EXE com PyInstaller
+        run: >
+          pyinstaller
+          --onefile
+          --noconsole
+          --name "Robo STUR"
+          --add-data "src;."
+          src/gui.py
+
+      - name: Upload do EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: Robo_STUR_Windows
+          path: dist/Robo STUR.exe
+          retention-days: 30

@@ -1,9 +1,17 @@
+import sys
 from dataclasses import dataclass
 from decimal import Decimal
 from os import getenv
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+
+def _base_dir_padrao() -> Path:
+    """Quando empacotado como .exe, usa a pasta do executável; senão, raiz do projeto."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent.parent
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,9 +39,9 @@ def _as_bool(value: str | None, default: bool = False) -> bool:
 
 
 def load_config() -> AppConfig:
-    load_dotenv()
-
-    base_dir = Path(__file__).resolve().parent.parent
+    base_dir = _base_dir_padrao()
+    # Procura .env na pasta base (funciona tanto no projeto quanto ao lado do .exe)
+    load_dotenv(dotenv_path=base_dir / ".env")
 
     config = AppConfig(
         stur_url=getenv("STUR_URL", "").strip(),
