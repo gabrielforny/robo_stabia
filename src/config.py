@@ -40,8 +40,14 @@ def _as_bool(value: str | None, default: bool = False) -> bool:
 
 def load_config() -> AppConfig:
     base_dir = _base_dir_padrao()
-    # Procura .env na pasta base (funciona tanto no projeto quanto ao lado do .exe)
+
+    # Tenta carregar .env em ordem de prioridade:
+    # 1. Pasta do .exe (ou raiz do projeto em dev)
+    # 2. Diretório de trabalho atual (cwd) — útil quando o exe é atalho em outro lugar
+    # 3. Busca padrão do dotenv (sobe nos diretórios a partir do cwd)
     load_dotenv(dotenv_path=base_dir / ".env")
+    load_dotenv(dotenv_path=Path.cwd() / ".env")
+    load_dotenv()
 
     config = AppConfig(
         stur_url=getenv("STUR_URL", "").strip(),

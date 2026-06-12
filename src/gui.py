@@ -112,8 +112,12 @@ class App(tk.Tk):
         try:
             self._garantir_playwright()
 
-            from config import load_config
+            from config import load_config, _base_dir_padrao
             from main import processar_arquivos, resolver_arquivos
+
+            env_esperado = _base_dir_padrao() / ".env"
+            self._log(f"Procurando .env em: {env_esperado}", "INFO")
+            self._log(f"Diretório de trabalho: {Path.cwd()}", "INFO")
 
             load_config()  # valida .env antes de continuar
 
