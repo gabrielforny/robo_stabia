@@ -77,9 +77,25 @@ class SturAutomation:
         self._context = None
         self.page: Page | None = None
 
+    def _launch_browser(self):
+        """
+        Tenta abrir um browser disponível na máquina nessa ordem:
+        1. Microsoft Edge  (pré-instalado em todo Windows 10/11)
+        2. Google Chrome   (se instalado)
+        3. Chromium do Playwright (requer playwright install chromium)
+        """
+        opts = {"headless": self.headless, "slow_mo": 300}
+        for channel in ("msedge", "chrome"):
+            try:
+                return self._playwright.chromium.launch(channel=channel, **opts)
+            except Exception:
+                pass
+        # Fallback: Chromium baixado pelo playwright install
+        return self._playwright.chromium.launch(**opts)
+
     def __enter__(self) -> "SturAutomation":
         self._playwright = sync_playwright().start()
-        self._browser = self._playwright.chromium.launch(headless=self.headless, slow_mo=300)
+        self._browser = self._launch_browser()
         self._context = self._browser.new_context(
             accept_downloads=True,
             viewport={"width": 1366, "height": 768},

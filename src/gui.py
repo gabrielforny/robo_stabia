@@ -169,20 +169,43 @@ class App(tk.Tk):
             self.after(0, self._finalizar_erro, str(exc))
 
     def _garantir_playwright(self):
-        """Instala o browser Chromium na primeira execução, se necessário."""
+        """
+        Verifica se algum browser está disponível (Edge, Chrome ou Chromium).
+        Edge e Chrome são usados diretamente se instalados no Windows.
+        Só tenta instalar o Chromium do Playwright como último recurso.
+        """
+        import platform
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            for channel in ("msedge", "chrome"):
+                try:
+                    b = p.chromium.launch(channel=channel, headless=True)
+                    b.close()
+                    self._log(f"Browser disponível: {channel}", "OK")
+                    return
+                except Exception:
+                    pass
+
+            # Nenhum browser do sistema — tenta instalar Chromium via driver do Playwright
+            try:
+                b = p.chromium.launch(headless=True)
+                b.close()
+                self._log("Browser disponível: chromium (playwright)", "OK")
+                return
+            except Exception:
+                pass
+
+        self._log("Nenhum browser encontrado. Instalando Chromium…", "WARNING")
+        # Usa o driver interno do Playwright para instalar (funciona em .exe congelado)
         try:
-            from playwright.sync_api import sync_playwright
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                browser.close()
-        except Exception:
-            self._log("Instalando Chromium (apenas na primeira execução)…", "WARNING")
-            subprocess.run(
-                [sys.executable, "-m", "playwright", "install", "chromium"],
-                check=True,
-                capture_output=True,
-            )
+            from playwright._impl._driver import compute_driver_executable
+            driver = compute_driver_executable()
+            env = {**__import__("os").environ}
+            subprocess.run([str(driver), "install", "chromium"], env=env, check=True, capture_output=True)
             self._log("Chromium instalado com sucesso.", "OK")
+        except Exception as exc:
+            self._log(f"Falha ao instalar Chromium: {exc}", "ERROR")
 
     # ------------------------------------------------------------------
     # Callbacks do thread principal
