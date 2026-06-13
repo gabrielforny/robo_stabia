@@ -155,7 +155,7 @@ class App(tk.Tk):
                 self.after(0, self._finalizar_erro, "Nenhum arquivo encontrado.")
                 return
 
-            resultados = processar_arquivos(arquivos, headless=True)
+            resultados = processar_arquivos(arquivos, headless=True, logger=logger)
             self.after(0, self._finalizar_ok, resultados)
 
         except ValueError as exc:

@@ -261,9 +261,25 @@ def processar_arquivo_aberto(
 # PONTO DE ENTRADA
 # ==========================================================
 
-def processar_arquivos(arquivos: list[Path], headless: bool) -> list[ResultadoProcessamento]:
+def processar_arquivos(
+    arquivos: list[Path],
+    headless: bool,
+    logger=None,
+) -> list[ResultadoProcessamento]:
     config = load_config()
-    logger = setup_logger(config.logs_dir)
+    if logger is None:
+        logger = setup_logger(config.logs_dir)
+    else:
+        # Garante que o log também vai para arquivo além da GUI
+        import logging as _logging
+        fh_existe = any(isinstance(h, _logging.FileHandler) for h in logger.handlers)
+        if not fh_existe:
+            from logger_config import setup_logger as _setup
+            _tmp = _setup(config.logs_dir)
+            for h in _tmp.handlers:
+                if isinstance(h, _logging.FileHandler):
+                    logger.addHandler(h)
+                    break
     excel_service = ExcelService(config)
 
     arquivos = [a for a in arquivos if a.suffix.lower() in EXTENSOES_SUPORTADAS]
