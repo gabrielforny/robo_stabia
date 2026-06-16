@@ -270,16 +270,18 @@ def processar_arquivos(
     if logger is None:
         logger = setup_logger(config.logs_dir)
     else:
-        # Garante que o log também vai para arquivo além da GUI
+        # Adiciona FileHandler diretamente — setup_logger faz handlers.clear() e
+        # apagaria o queue handler da GUI, fazendo os logs sumirem da tela.
         import logging as _logging
         fh_existe = any(isinstance(h, _logging.FileHandler) for h in logger.handlers)
         if not fh_existe:
-            from logger_config import setup_logger as _setup
-            _tmp = _setup(config.logs_dir)
-            for h in _tmp.handlers:
-                if isinstance(h, _logging.FileHandler):
-                    logger.addHandler(h)
-                    break
+            from datetime import datetime as _dt
+            config.logs_dir.mkdir(exist_ok=True)
+            log_file = config.logs_dir / f"robo_stur_{_dt.now():%Y%m%d_%H%M%S}.log"
+            fh = _logging.FileHandler(log_file, encoding="utf-8")
+            fh.setFormatter(_logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s"))
+            fh.setLevel(_logging.INFO)
+            logger.addHandler(fh)
     excel_service = ExcelService(config)
 
     arquivos = [a for a in arquivos if a.suffix.lower() in EXTENSOES_SUPORTADAS]
