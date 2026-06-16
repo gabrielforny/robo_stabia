@@ -106,7 +106,11 @@ class ExcelService:
             data_fatura = self._converter_extrato_para_data_fatura(extrato_conta)
 
             codigo_venda_vcn = self._extrair_codigo_venda_vcn(vcn)
-            localizador_extraido = self._extrair_localizador_apos_asterisco(estabelecimento)
+            companhia = self._identificar_companhia(estabelecimento)
+            if companhia == "AZUL":
+                localizador_extraido = self._extrair_localizador_azul(estabelecimento)
+            else:
+                localizador_extraido = self._extrair_localizador_apos_asterisco(estabelecimento)
             termo_busca, coluna_busca, tipo_busca = self._definir_estrategia_busca(
                 estabelecimento=estabelecimento,
                 codigo_venda_vcn=codigo_venda_vcn,
@@ -362,28 +366,50 @@ class ExcelService:
 
         Regras:
         - Se o VCN trouxer venda, busca direto por Venda.
-        - Se for LATAM e tiver '*', busca direto pelo Localizador extraído.
-        - Se NÃO for LATAM, mas tiver '*', mantém o estabelecimento como termo principal,
-          porém sinaliza que também deve tentar o Localizador extraído.
-        - Se não tiver '*', fluxo genérico normal.
+        - Se for LATAM, GOL ou AZUL e tiver localizador extraído, busca direto
+          pelo Localizador.
+        - Se NÃO for nenhuma dessas, mas tiver '*', mantém o estabelecimento como
+          termo principal, porém sinaliza que também deve tentar o Localizador extraído.
+        - Caso contrário, fluxo genérico normal.
         """
         if codigo_venda_vcn:
             return codigo_venda_vcn, "Venda", "VCN"
 
-        if localizador_extraido and "latam" in estabelecimento.lower():
-            return localizador_extraido, "Localizador", "LATAM"
+        companhia = self._identificar_companhia(estabelecimento)
+        if localizador_extraido and companhia:
+            return localizador_extraido, "Localizador", companhia
 
         if localizador_extraido:
             return estabelecimento, "Fornecedor", "GENERICO_COM_LOCALIZADOR"
 
         return estabelecimento, "Fornecedor", "GENERICO"
 
+    def _identificar_companhia(self, estabelecimento: str) -> str | None:
+        texto = str(estabelecimento or "").lower()
+        if "latam" in texto:
+            return "LATAM"
+        if "gol" in texto:
+            return "GOL"
+        if "azul" in texto:
+            return "AZUL"
+        return None
+
     def _extrair_localizador_apos_asterisco(self, estabelecimento: str) -> str | None:
+        """Usado por LATAM e GOL — o localizador vem logo depois do '*'."""
         texto = str(estabelecimento or "").strip()
         if "*" not in texto:
             return None
 
         match = re.search(r"\*\s*([A-Za-z0-9]{6})", texto)
+        if not match:
+            return None
+
+        return match.group(1).upper()
+
+    def _extrair_localizador_azul(self, estabelecimento: str) -> str | None:
+        """Na AZUL o localizador são os últimos 6 caracteres alfanuméricos da descrição."""
+        texto = str(estabelecimento or "").strip()
+        match = re.search(r"([A-Za-z0-9]{6})\s*$", texto)
         if not match:
             return None
 

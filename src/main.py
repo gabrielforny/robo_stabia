@@ -16,6 +16,7 @@ from stur_financeiro_automation import SturFinanceiroAutomation
 
 
 EXTENSOES_SUPORTADAS = {".xlsx", ".xls", ".csv"}
+COMPANHIAS_SUPORTADAS = {"LATAM", "GOL", "AZUL"}
 
 
 def _pasta_documentos() -> Path:
@@ -249,10 +250,13 @@ def processar_arquivo_aberto(
     transacoes = excel_service.montar_transacoes(df, origem_arquivo=arquivo.name)
     logger.info("Total de linhas a processar: %d", len(transacoes))
 
-    transacoes_latam = [t for t in transacoes if t.tipo_busca == "LATAM"]
-    transacoes_outras = [t for t in transacoes if t.tipo_busca != "LATAM"]
+    transacoes_latam = [t for t in transacoes if t.tipo_busca in COMPANHIAS_SUPORTADAS]
+    transacoes_outras = [t for t in transacoes if t.tipo_busca not in COMPANHIAS_SUPORTADAS]
 
-    logger.info("LATAM: %d | Outros (ignorados nesta versão): %d", len(transacoes_latam), len(transacoes_outras))
+    logger.info(
+        "LATAM/GOL/AZUL: %d | Outros (ignorados nesta versão): %d",
+        len(transacoes_latam), len(transacoes_outras),
+    )
 
     total_sucesso = 0
     total_erro = 0
