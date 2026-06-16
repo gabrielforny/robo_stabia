@@ -1,6 +1,8 @@
 
 import argparse
+import shutil
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 
 from config import load_config
@@ -14,6 +16,18 @@ from stur_financeiro_automation import SturFinanceiroAutomation
 EXTENSOES_SUPORTADAS = {".xlsx", ".xls", ".csv"}
 
 PASTA_AUTOMACAO_STUR = Path.home() / "Documents" / "automacao-stur"
+PASTA_FINALIZADAS = PASTA_AUTOMACAO_STUR / "finalizadas"
+
+
+def mover_para_finalizadas(arquivo_saida: Path) -> Path:
+    """Move o arquivo já processado (com cores) para automacao-stur/finalizadas,
+    renomeando com sufixo -finalizada-DD-MM-AAAA-HH-MM."""
+    PASTA_FINALIZADAS.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M")
+    novo_nome = f"{arquivo_saida.stem}-finalizada-{timestamp}{arquivo_saida.suffix}"
+    destino = PASTA_FINALIZADAS / novo_nome
+    shutil.move(str(arquivo_saida), str(destino))
+    return destino
 
 
 # ==========================================================
@@ -249,6 +263,15 @@ def processar_arquivo_aberto(
     arquivo_saida = excel_service.salvar_no_local_com_cores(df, arquivo)
     logger.info("Arquivo final salvo: %s", arquivo_saida)
 
+    # Quando a entrada é CSV, salvar_no_local_com_cores cria um .xlsx ao lado e
+    # deixa o .csv original intacto — sem isso ele ficaria na pasta e seria
+    # reprocessado na próxima execução.
+    if arquivo != arquivo_saida and arquivo.exists():
+        arquivo.unlink()
+
+    arquivo_saida = mover_para_finalizadas(arquivo_saida)
+    logger.info("Arquivo movido para finalizadas: %s", arquivo_saida)
+
     return ResultadoProcessamento(
         arquivo_saida=arquivo_saida,
         total_linhas=len(transacoes_latam),
@@ -345,19 +368,15 @@ def resolver_arquivos(args) -> list[Path]:
     if args.pasta:
         return listar_arquivos_da_pasta(Path(args.pasta))
 
-    # Padrão: pasta ~/Documents/automacao-stur — pega só o arquivo mais recente
-    if PASTA_AUTOMACAO_STUR.exists():
-        arquivos = listar_arquivos_da_pasta(PASTA_AUTOMACAO_STUR)
-        if arquivos:
-            return [arquivos[-1]]
+    # Padrão: pasta ~/Documents/automacao-stur — pega só o arquivo mais recente.
+    # Sem fallback para Downloads/projeto: se a pasta não existir ou estiver vazia,
+    # é melhor avisar o usuário do que processar arquivos de outro lugar por engano.
+    PASTA_AUTOMACAO_STUR.mkdir(parents=True, exist_ok=True)
+    arquivos = listar_arquivos_da_pasta(PASTA_AUTOMACAO_STUR)
+    if arquivos:
+        return [arquivos[-1]]
 
-    # Fallback: pasta input/ do projeto
-    pasta_input = Path(__file__).resolve().parent.parent / "input"
-    arquivos_input = listar_arquivos_da_pasta(pasta_input)
-    if arquivos_input:
-        return arquivos_input
-
-    return listar_arquivos_da_pasta(Path.home() / "Downloads")
+    return []
 
 
 def main() -> None:
