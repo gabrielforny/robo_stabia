@@ -128,7 +128,7 @@ class App(tk.Tk):
             self._garantir_playwright()
 
             from config import load_config, _base_dir_padrao
-            from main import processar_arquivos, resolver_arquivos
+            from main import PASTA_AUTOMACAO_STUR, processar_arquivos, resolver_arquivos
 
             env_esperado = _base_dir_padrao() / ".env"
             self._log(f"Procurando .env em: {env_esperado}", "INFO")
@@ -151,7 +151,7 @@ class App(tk.Tk):
             arquivos = resolver_arquivos(args)
 
             if not arquivos:
-                self._log("ERRO: Nenhum arquivo encontrado em ~/Documents/automacao-stur/", "ERROR")
+                self._log(f"ERRO: Nenhum arquivo encontrado em {PASTA_AUTOMACAO_STUR}", "ERROR")
                 self.after(0, self._finalizar_erro, "Nenhum arquivo encontrado.")
                 return
 

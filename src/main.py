@@ -1,6 +1,8 @@
 
 import argparse
+import os
 import shutil
+import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +17,32 @@ from stur_financeiro_automation import SturFinanceiroAutomation
 
 EXTENSOES_SUPORTADAS = {".xlsx", ".xls", ".csv"}
 
-PASTA_AUTOMACAO_STUR = Path.home() / "Documents" / "automacao-stur"
+
+def _pasta_documentos() -> Path:
+    """
+    Encontra a pasta real de Documentos do usuário no Windows.
+
+    Path.home() / "Documents" não funciona quando o OneDrive redireciona a
+    pasta Documentos (Backup de Pastas Conhecidas) — nesse caso o caminho real
+    fica em algo como "OneDrive - EMPRESA\\Documentos". O registro do Windows
+    sempre reflete o local atual, então é a fonte confiável aqui.
+    """
+    if sys.platform == "win32":
+        try:
+            import winreg
+            with winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders",
+            ) as key:
+                valor, _ = winreg.QueryValueEx(key, "Personal")
+                return Path(os.path.expandvars(valor))
+        except Exception:
+            pass
+
+    return Path.home() / "Documents"
+
+
+PASTA_AUTOMACAO_STUR = _pasta_documentos() / "automacao-stur"
 PASTA_FINALIZADAS = PASTA_AUTOMACAO_STUR / "finalizadas"
 
 
