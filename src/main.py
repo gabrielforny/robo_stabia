@@ -149,7 +149,6 @@ def processar_latam_conferencia(
         )
 
     for chave_mes, grupo in grupos.items():
-        # TODO: remover sufixo quando sair de testes
         descricao_busca = f"Clara {chave_mes}"
         descricao_criar = f"Clara {chave_mes}"
         data_fatura = grupo[0].data_fatura
