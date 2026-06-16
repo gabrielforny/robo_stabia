@@ -10,7 +10,7 @@ from pathlib import Path
 from config import load_config
 from excel_service import ExcelService
 from logger_config import setup_logger
-from models import ResultadoProcessamento, Transacao
+from models import ProcessamentoCancelado, ResultadoProcessamento, Transacao
 from stur_automation import SturAutomation, VendaJaFaturadaError
 from stur_financeiro_automation import SturFinanceiroAutomation
 
@@ -68,6 +68,7 @@ def processar_latam_vendas(
     df,
     transacoes_latam: list[Transacao],
     logger,
+    deve_parar=None,
 ) -> tuple[int, int]:
     """
     Para cada item LATAM: busca o localizador na tela de Vendas, valida
@@ -78,6 +79,10 @@ def processar_latam_vendas(
     total_erro = 0
 
     for transacao in transacoes_latam:
+        if deve_parar and deve_parar():
+            logger.warning("Parada solicitada — interrompendo Fase 1 (Vendas).")
+            raise ProcessamentoCancelado()
+
         if not transacao.localizador_extraido:
             msg = "ERRO | LATAM sem localizador extraído"
             excel_service.escrever_resultado(df, transacao, msg)
@@ -154,6 +159,7 @@ def processar_latam_conferencia(
     df,
     transacoes_latam: list[Transacao],
     logger,
+    deve_parar=None,
 ) -> None:
     """
     Agrupa os itens LATAM por mês/ano de fatura, busca ou cria a conferência,
@@ -177,6 +183,10 @@ def processar_latam_conferencia(
         )
 
     for chave_mes, grupo in grupos.items():
+        if deve_parar and deve_parar():
+            logger.warning("Parada solicitada — interrompendo Fase 2 (Conferências).")
+            raise ProcessamentoCancelado()
+
         descricao_busca = f"Clara {chave_mes}"
         descricao_criar = f"Clara {chave_mes}"
         data_fatura = grupo[0].data_fatura
@@ -194,6 +204,10 @@ def processar_latam_conferencia(
             financeiro.garantir_coluna_localizador_visivel()
 
             for transacao in grupo:
+                if deve_parar and deve_parar():
+                    logger.warning("Parada solicitada — interrompendo seleção de localizadores.")
+                    raise ProcessamentoCancelado()
+
                 if not transacao.localizador_extraido:
                     excel_service.acrescentar_resultado(
                         df, transacao, "ERRO Conferência | sem localizador"
@@ -218,6 +232,8 @@ def processar_latam_conferencia(
             financeiro.gravar_titulos()
             financeiro.gravar_conferencia()
 
+        except ProcessamentoCancelado:
+            raise
         except Exception as exc:
             logger.exception("Erro no processamento da conferência LATAM %s", descricao_busca)
             for transacao in grupo:
@@ -241,6 +257,7 @@ def processar_arquivo_aberto(
     stur: SturAutomation,
     financeiro: SturFinanceiroAutomation,
     logger,
+    deve_parar=None,
 ) -> ResultadoProcessamento:
     logger.info("Iniciando processamento do arquivo: %s", arquivo)
 
@@ -262,32 +279,41 @@ def processar_arquivo_aberto(
     total_erro = 0
 
     if transacoes_latam:
-        # Fase 1: Vendas
-        logger.info("=== FASE 1: Vendas ===")
-        sucesso_v, erro_v = processar_latam_vendas(
-            stur=stur,
-            excel_service=excel_service,
-            df=df,
-            transacoes_latam=transacoes_latam,
-            logger=logger,
-        )
-        total_sucesso += sucesso_v
-        total_erro += erro_v
+        try:
+            # Fase 1: Vendas
+            logger.info("=== FASE 1: Vendas ===")
+            sucesso_v, erro_v = processar_latam_vendas(
+                stur=stur,
+                excel_service=excel_service,
+                df=df,
+                transacoes_latam=transacoes_latam,
+                logger=logger,
+                deve_parar=deve_parar,
+            )
+            total_sucesso += sucesso_v
+            total_erro += erro_v
 
-        arquivo_parcial = excel_service.salvar_saida(df, arquivo)
-        logger.info("Backup parcial (pós Vendas) salvo em: %s", arquivo_parcial)
-        excel_service.salvar_no_local_com_cores(df, arquivo)
+            arquivo_parcial = excel_service.salvar_saida(df, arquivo)
+            logger.info("Backup parcial (pós Vendas) salvo em: %s", arquivo_parcial)
+            excel_service.salvar_no_local_com_cores(df, arquivo)
 
-        # Fase 2: Conferências
-        logger.info("=== FASE 2: Conferências ===")
-        financeiro.acessar_tela_conferencias_baixas()
-        processar_latam_conferencia(
-            financeiro=financeiro,
-            excel_service=excel_service,
-            df=df,
-            transacoes_latam=transacoes_latam,
-            logger=logger,
-        )
+            # Fase 2: Conferências
+            logger.info("=== FASE 2: Conferências ===")
+            financeiro.acessar_tela_conferencias_baixas()
+            processar_latam_conferencia(
+                financeiro=financeiro,
+                excel_service=excel_service,
+                df=df,
+                transacoes_latam=transacoes_latam,
+                logger=logger,
+                deve_parar=deve_parar,
+            )
+        except ProcessamentoCancelado:
+            # Salva o que já foi marcado (OK/ERRO) até o momento da parada,
+            # antes de propagar o cancelamento para encerrar tudo.
+            excel_service.salvar_no_local_com_cores(df, arquivo)
+            logger.warning("Processamento interrompido pelo usuário — progresso parcial salvo em: %s", arquivo)
+            raise
 
     excel_service.salvar_saida(df, arquivo)
     arquivo_saida = excel_service.salvar_no_local_com_cores(df, arquivo)
@@ -318,6 +344,7 @@ def processar_arquivos(
     arquivos: list[Path],
     headless: bool,
     logger=None,
+    deve_parar=None,
 ) -> list[ResultadoProcessamento]:
     config = load_config()
     if logger is None:
@@ -361,13 +388,23 @@ def processar_arquivos(
         stur.garantir_coluna_localizador_visivel()
 
         for arquivo in arquivos:
-            resultado = processar_arquivo_aberto(
-                arquivo=arquivo,
-                excel_service=excel_service,
-                stur=stur,
-                financeiro=financeiro,
-                logger=logger,
-            )
+            if deve_parar and deve_parar():
+                logger.warning("Parada solicitada — encerrando antes do próximo arquivo.")
+                raise ProcessamentoCancelado(resultados)
+
+            try:
+                resultado = processar_arquivo_aberto(
+                    arquivo=arquivo,
+                    excel_service=excel_service,
+                    stur=stur,
+                    financeiro=financeiro,
+                    logger=logger,
+                    deve_parar=deve_parar,
+                )
+            except ProcessamentoCancelado as exc:
+                exc.resultados_parciais = resultados
+                raise
+
             resultados.append(resultado)
 
             # Entre arquivos: volta para Vendas para o próximo

@@ -32,6 +32,7 @@ class App(tk.Tk):
         self.minsize(700, 450)
         self.configure(bg="#f5f5f5")
         self._log_queue: queue.Queue = queue.Queue()
+        self._stop_event = threading.Event()
         self._build_ui()
         self._poll_logs()
 
@@ -59,6 +60,23 @@ class App(tk.Tk):
             command=self._iniciar,
         )
         self.btn_iniciar.pack(side=tk.LEFT)
+
+        self.btn_parar = tk.Button(
+            top,
+            text="■   Parar",
+            font=("Helvetica", 13, "bold"),
+            bg="#c62828",
+            fg="white",
+            activebackground="#8e0000",
+            activeforeground="white",
+            padx=20,
+            pady=10,
+            relief=tk.FLAT,
+            cursor="hand2",
+            state=tk.DISABLED,
+            command=self._parar,
+        )
+        self.btn_parar.pack(side=tk.LEFT, padx=(10, 0))
 
         self.lbl_status = tk.Label(
             top, text="Pronto para iniciar.", font=("Helvetica", 11),
@@ -103,10 +121,18 @@ class App(tk.Tk):
 
     def _iniciar(self):
         self.btn_iniciar.config(state=tk.DISABLED)
+        self.btn_parar.config(state=tk.NORMAL, text="■   Parar")
         self.lbl_status.config(text="Processando…", fg="#1565c0")
         self.frame_resumo.pack_forget()
         self._limpar_log()
+        self._stop_event.clear()
         threading.Thread(target=self._run, daemon=True).start()
+
+    def _parar(self):
+        self.btn_parar.config(state=tk.DISABLED, text="Parando…")
+        self.lbl_status.config(text="Parando com segurança…", fg="#c62828")
+        self._log("Solicitação de parada recebida — encerrando no próximo ponto seguro (pode levar alguns segundos)…", "WARNING")
+        self._stop_event.set()
 
     def _run(self):
         try:
@@ -129,6 +155,7 @@ class App(tk.Tk):
 
             from config import load_config, _base_dir_padrao
             from main import PASTA_AUTOMACAO_STUR, processar_arquivos, resolver_arquivos
+            from models import ProcessamentoCancelado
 
             env_esperado = _base_dir_padrao() / ".env"
             self._log(f"Procurando .env em: {env_esperado}", "INFO")
@@ -155,9 +182,15 @@ class App(tk.Tk):
                 self.after(0, self._finalizar_erro, "Nenhum arquivo encontrado.")
                 return
 
-            resultados = processar_arquivos(arquivos, headless=False, logger=logger)
+            resultados = processar_arquivos(
+                arquivos, headless=False, logger=logger,
+                deve_parar=self._stop_event.is_set,
+            )
             self.after(0, self._finalizar_ok, resultados)
 
+        except ProcessamentoCancelado as exc:
+            self._log("Processamento interrompido pelo usuário.", "WARNING")
+            self.after(0, self._finalizar_cancelado, exc.resultados_parciais)
         except ValueError as exc:
             # Erros de configuração (.env incompleto etc.)
             self._log(f"ERRO DE CONFIGURAÇÃO: {exc}", "ERROR")
@@ -213,6 +246,7 @@ class App(tk.Tk):
 
     def _finalizar_ok(self, resultados):
         self.btn_iniciar.config(state=tk.NORMAL)
+        self.btn_parar.config(state=tk.DISABLED, text="■   Parar")
         self.lbl_status.config(text="Concluído com sucesso!", fg="#2e7d32")
 
         linhas = ["Processamento finalizado.", "─" * 50]
@@ -231,12 +265,37 @@ class App(tk.Tk):
 
     def _finalizar_erro(self, msg: str):
         self.btn_iniciar.config(state=tk.NORMAL)
+        self.btn_parar.config(state=tk.DISABLED, text="■   Parar")
         self.lbl_status.config(text=f"Erro: {msg}", fg="#c62828")
         self.lbl_resumo.config(
             text=f"Processamento encerrado com erro.\n{msg}",
             fg="#b71c1c", bg="#ffebee",
         )
         self.frame_resumo.configure(bg="#ffebee")
+        self.frame_resumo.pack(fill=tk.X, padx=14, pady=(0, 12))
+
+    def _finalizar_cancelado(self, resultados_parciais):
+        self.btn_iniciar.config(state=tk.NORMAL)
+        self.btn_parar.config(state=tk.DISABLED, text="■   Parar")
+        self.lbl_status.config(text="Interrompido pelo usuário.", fg="#e65100")
+
+        linhas = ["Processamento interrompido pelo usuário.", "─" * 50]
+        if resultados_parciais:
+            linhas.append("Arquivos concluídos antes da parada:")
+            for r in resultados_parciais:
+                linhas += [
+                    f"Arquivo saída : {r.arquivo_saida}",
+                    f"Total LATAM   : {r.total_linhas}",
+                    f"Sucesso Vendas: {r.total_sucesso}",
+                    f"Erro Vendas   : {r.total_erro}",
+                    "",
+                ]
+        else:
+            linhas.append("Nenhum arquivo foi concluído antes da parada.")
+
+        self.lbl_resumo.config(text="\n".join(linhas).strip(), fg="#e65100",
+                                bg="#fff3e0")
+        self.frame_resumo.configure(bg="#fff3e0")
         self.frame_resumo.pack(fill=tk.X, padx=14, pady=(0, 12))
 
     # ------------------------------------------------------------------

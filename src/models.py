@@ -3,6 +3,18 @@ from decimal import Decimal
 from pathlib import Path
 
 
+class ProcessamentoCancelado(Exception):
+    """Levantada quando o usuário pede para parar o robô pela GUI.
+
+    Carrega os resultados dos arquivos já concluídos antes do cancelamento,
+    para que a GUI possa mostrar um resumo parcial.
+    """
+
+    def __init__(self, resultados_parciais: list["ResultadoProcessamento"] | None = None):
+        super().__init__("Processamento cancelado pelo usuário.")
+        self.resultados_parciais = resultados_parciais or []
+
+
 @dataclass(slots=True)
 class Transacao:
     indice_planilha: int
