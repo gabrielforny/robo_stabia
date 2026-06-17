@@ -17,6 +17,7 @@ from stur_financeiro_automation import SturFinanceiroAutomation
 
 EXTENSOES_SUPORTADAS = {".xlsx", ".xls", ".csv"}
 COMPANHIAS_SUPORTADAS = {"LATAM", "GOL", "AZUL"}
+MAX_TENTATIVAS_POR_ITEM = 3
 
 
 def _pasta_documentos() -> Path:
@@ -63,7 +64,8 @@ def mover_para_finalizadas(arquivo_saida: Path) -> Path:
 # ==========================================================
 
 def processar_latam_vendas(
-    stur: SturAutomation,
+    config,
+    headless: bool,
     excel_service: ExcelService,
     df,
     transacoes_latam: list[Transacao],
@@ -73,78 +75,165 @@ def processar_latam_vendas(
     """
     Para cada item LATAM: busca o localizador na tela de Vendas, valida
     Total Fornecedor e executa seguir_fluxo_venda_ok.
-    """
 
+    Gerencia o ciclo de vida do browser internamente. Em caso de falha em
+    qualquer item, fecha o browser, reabre, faz login novamente e retenta
+    o mesmo item — até MAX_TENTATIVAS_POR_ITEM vezes. Se todas as tentativas
+    falharem, registra erro na planilha e segue para o próximo item.
+    """
     total_sucesso = 0
     total_erro = 0
+    stur: SturAutomation | None = None
 
-    for transacao in transacoes_latam:
-        if deve_parar and deve_parar():
-            logger.warning("Parada solicitada — interrompendo Fase 1 (Vendas).")
-            raise ProcessamentoCancelado()
+    def _fechar_sessao():
+        nonlocal stur
+        if stur is not None:
+            try:
+                stur.__exit__(None, None, None)
+            except Exception:
+                pass
+            stur = None
 
-        if not transacao.localizador_extraido:
-            msg = "ERRO | LATAM sem localizador extraído"
-            excel_service.escrever_resultado(df, transacao, msg)
-            total_erro += 1
-            continue
-
-        logger.info("Buscando localizador nas Vendas: %s", transacao.localizador_extraido)
-
+    def _abrir_nova_sessao():
+        nonlocal stur
+        _fechar_sessao()
+        s = SturAutomation(config=config, logger=logger, headless=headless)
+        s.__enter__()
         try:
-            candidatos = stur.buscar_latam_por_localizador(transacao)
-        except Exception as exc:
-            logger.exception("Erro ao buscar localizador %s nas Vendas", transacao.localizador_extraido)
-            excel_service.escrever_resultado(df, transacao, f"ERRO | Busca Vendas: {type(exc).__name__}: {exc}")
-            total_erro += 1
-            continue
+            s.login()
+            s.acessar_tela_vendas()
+            s.garantir_coluna_localizador_visivel()
+        except Exception:
+            try:
+                s.__exit__(None, None, None)
+            except Exception:
+                pass
+            raise
+        stur = s
 
-        if not candidatos:
-            msg = f"ERRO | Localizador {transacao.localizador_extraido} não encontrado nas Vendas"
-            excel_service.escrever_resultado(df, transacao, msg)
-            total_erro += 1
-            continue
+    try:
+        _abrir_nova_sessao()
 
-        # Valida Total Fornecedor (ignora sinal)
-        candidato_ok = None
-        for c in candidatos:
-            if transacao.valor_excel is not None and c.total_fornecedor is not None:
-                if abs(c.total_fornecedor) == abs(transacao.valor_excel):
-                    candidato_ok = c
+        for transacao in transacoes_latam:
+            if deve_parar and deve_parar():
+                logger.warning("Parada solicitada — interrompendo Fase 1 (Vendas).")
+                raise ProcessamentoCancelado()
+
+            if not transacao.localizador_extraido:
+                excel_service.escrever_resultado(df, transacao, "ERRO | LATAM sem localizador extraído")
+                total_erro += 1
+                continue
+
+            ultima_exc: Exception | None = None
+            resultado_msg: str | None = None
+            foi_sucesso = False
+
+            for tentativa in range(1, MAX_TENTATIVAS_POR_ITEM + 1):
+                if deve_parar and deve_parar():
+                    raise ProcessamentoCancelado()
+
+                if tentativa > 1:
+                    logger.warning(
+                        "Tentativa %d/%d para localizador %s — fechando browser e reabrindo do zero...",
+                        tentativa, MAX_TENTATIVAS_POR_ITEM, transacao.localizador_extraido,
+                    )
+                    try:
+                        _abrir_nova_sessao()
+                    except Exception as exc_sessao:
+                        logger.error(
+                            "Falha ao reabrir browser na tentativa %d: %s",
+                            tentativa, exc_sessao,
+                        )
+                        ultima_exc = exc_sessao
+                        continue
+
+                logger.info(
+                    "Buscando localizador nas Vendas: %s%s",
+                    transacao.localizador_extraido,
+                    f" (tentativa {tentativa}/{MAX_TENTATIVAS_POR_ITEM})" if tentativa > 1 else "",
+                )
+
+                try:
+                    candidatos = stur.buscar_latam_por_localizador(transacao)
+                except Exception as exc:
+                    logger.warning(
+                        "Erro ao buscar localizador %s (tentativa %d/%d): %s",
+                        transacao.localizador_extraido, tentativa, MAX_TENTATIVAS_POR_ITEM, exc,
+                    )
+                    ultima_exc = exc
+                    continue
+
+                if not candidatos:
+                    resultado_msg = (
+                        f"ERRO | Localizador {transacao.localizador_extraido} "
+                        f"não encontrado nas Vendas"
+                    )
+                    break  # não é falha de browser — não retentar
+
+                candidato_ok = None
+                for c in candidatos:
+                    if transacao.valor_excel is not None and c.total_fornecedor is not None:
+                        if abs(c.total_fornecedor) == abs(transacao.valor_excel):
+                            candidato_ok = c
+                            break
+
+                if not candidato_ok:
+                    vals = [str(c.total_fornecedor) for c in candidatos]
+                    resultado_msg = (
+                        f"ERRO | Valor não bate nas Vendas | "
+                        f"Excel={transacao.valor_excel} | Tabela={vals}"
+                    )
+                    break  # não é falha de browser — não retentar
+
+                logger.info(
+                    "Localizador %s → Venda=%s | TotalForn=%s",
+                    transacao.localizador_extraido,
+                    candidato_ok.codigo_venda,
+                    candidato_ok.total_fornecedor,
+                )
+
+                try:
+                    stur.seguir_fluxo_venda_ok(
+                        candidato_ok, codigo_autorizacao=transacao.codigo_autorizacao
+                    )
+                    resultado_msg = (
+                        f"OK Vendas | Venda {candidato_ok.codigo_venda} | "
+                        f"Loc {transacao.localizador_extraido}"
+                    )
+                    foi_sucesso = True
+                    ultima_exc = None
                     break
+                except VendaJaFaturadaError:
+                    logger.warning("Venda %s já faturada — marcando e seguindo.", candidato_ok.codigo_venda)
+                    resultado_msg = (
+                        f"JÁ FATURADO | Venda {candidato_ok.codigo_venda} | "
+                        f"Loc {transacao.localizador_extraido}"
+                    )
+                    break  # condição esperada — não retentar
+                except Exception as exc:
+                    logger.warning(
+                        "Erro ao processar venda %s (tentativa %d/%d): %s",
+                        candidato_ok.codigo_venda, tentativa, MAX_TENTATIVAS_POR_ITEM, exc,
+                    )
+                    ultima_exc = exc
+                    continue
 
-        if not candidato_ok:
-            vals = [str(c.total_fornecedor) for c in candidatos]
-            msg = (
-                f"ERRO | Valor não bate nas Vendas | "
-                f"Excel={transacao.valor_excel} | Tabela={vals}"
-            )
-            excel_service.escrever_resultado(df, transacao, msg)
-            total_erro += 1
-            continue
+            # Esgotadas as tentativas sem resultado definido
+            if resultado_msg is None:
+                resultado_msg = (
+                    f"ERRO | {MAX_TENTATIVAS_POR_ITEM} tentativas falharam para "
+                    f"{transacao.localizador_extraido} | "
+                    f"{type(ultima_exc).__name__}: {ultima_exc}"
+                )
 
-        logger.info(
-            "Localizador %s → Venda=%s | TotalForn=%s",
-            transacao.localizador_extraido,
-            candidato_ok.codigo_venda,
-            candidato_ok.total_fornecedor,
-        )
+            excel_service.escrever_resultado(df, transacao, resultado_msg)
+            if foi_sucesso:
+                total_sucesso += 1
+            else:
+                total_erro += 1
 
-        try:
-            stur.seguir_fluxo_venda_ok(candidato_ok, codigo_autorizacao=transacao.codigo_autorizacao)
-            msg = f"OK Vendas | Venda {candidato_ok.codigo_venda} | Loc {transacao.localizador_extraido}"
-            excel_service.escrever_resultado(df, transacao, msg)
-            total_sucesso += 1
-        except VendaJaFaturadaError:
-            logger.warning("Venda %s já faturada — marcando e seguindo.", candidato_ok.codigo_venda)
-            msg = f"JÁ FATURADO | Venda {candidato_ok.codigo_venda} | Loc {transacao.localizador_extraido}"
-            excel_service.escrever_resultado(df, transacao, msg)
-            total_erro += 1
-        except Exception as exc:
-            logger.exception("Erro ao processar venda %s", candidato_ok.codigo_venda)
-            msg = f"ERRO | Venda {candidato_ok.codigo_venda}: {type(exc).__name__}: {exc}"
-            excel_service.escrever_resultado(df, transacao, msg)
-            total_erro += 1
+    finally:
+        _fechar_sessao()
 
     return total_sucesso, total_erro
 
@@ -254,8 +343,8 @@ def processar_latam_conferencia(
 def processar_arquivo_aberto(
     arquivo: Path,
     excel_service: ExcelService,
-    stur: SturAutomation,
-    financeiro: SturFinanceiroAutomation,
+    config,
+    headless: bool,
     logger,
     deve_parar=None,
 ) -> ResultadoProcessamento:
@@ -280,10 +369,11 @@ def processar_arquivo_aberto(
 
     if transacoes_latam:
         try:
-            # Fase 1: Vendas
+            # Fase 1: Vendas — gerencia o próprio browser com retry por item
             logger.info("=== FASE 1: Vendas ===")
             sucesso_v, erro_v = processar_latam_vendas(
-                stur=stur,
+                config=config,
+                headless=headless,
                 excel_service=excel_service,
                 df=df,
                 transacoes_latam=transacoes_latam,
@@ -297,22 +387,29 @@ def processar_arquivo_aberto(
             logger.info("Backup parcial (pós Vendas) salvo em: %s", arquivo_parcial)
             excel_service.salvar_no_local_com_cores(df, arquivo)
 
-            # Fase 2: Conferências
+            # Fase 2: Conferências — nova sessão de browser
             logger.info("=== FASE 2: Conferências ===")
-            financeiro.acessar_tela_conferencias_baixas()
-            processar_latam_conferencia(
-                financeiro=financeiro,
-                excel_service=excel_service,
-                df=df,
-                transacoes_latam=transacoes_latam,
-                logger=logger,
-                deve_parar=deve_parar,
-            )
+            with SturAutomation(config=config, logger=logger, headless=headless) as stur_conf:
+                stur_conf.login()
+                financeiro = SturFinanceiroAutomation(
+                    page=stur_conf._page(),
+                    logger=logger,
+                    espera_padrao_segundos=3,
+                )
+                financeiro.acessar_tela_conferencias_baixas()
+                processar_latam_conferencia(
+                    financeiro=financeiro,
+                    excel_service=excel_service,
+                    df=df,
+                    transacoes_latam=transacoes_latam,
+                    logger=logger,
+                    deve_parar=deve_parar,
+                )
         except ProcessamentoCancelado:
-            # Salva o que já foi marcado (OK/ERRO) até o momento da parada,
-            # antes de propagar o cancelamento para encerrar tudo.
             excel_service.salvar_no_local_com_cores(df, arquivo)
-            logger.warning("Processamento interrompido pelo usuário — progresso parcial salvo em: %s", arquivo)
+            logger.warning(
+                "Processamento interrompido pelo usuário — progresso parcial salvo em: %s", arquivo
+            )
             raise
 
     excel_service.salvar_saida(df, arquivo)
@@ -362,6 +459,7 @@ def processar_arquivos(
             fh.setFormatter(_logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s"))
             fh.setLevel(_logging.INFO)
             logger.addHandler(fh)
+
     excel_service = ExcelService(config)
 
     arquivos = [a for a in arquivos if a.suffix.lower() in EXTENSOES_SUPORTADAS]
@@ -374,46 +472,25 @@ def processar_arquivos(
 
     resultados: list[ResultadoProcessamento] = []
 
-    with SturAutomation(config=config, logger=logger, headless=headless) as stur:
-        stur.login()
+    for arquivo in arquivos:
+        if deve_parar and deve_parar():
+            logger.warning("Parada solicitada — encerrando antes do próximo arquivo.")
+            raise ProcessamentoCancelado(resultados)
 
-        financeiro = SturFinanceiroAutomation(
-            page=stur._page(),
-            logger=logger,
-            espera_padrao_segundos=3,
-        )
+        try:
+            resultado = processar_arquivo_aberto(
+                arquivo=arquivo,
+                excel_service=excel_service,
+                config=config,
+                headless=headless,
+                logger=logger,
+                deve_parar=deve_parar,
+            )
+        except ProcessamentoCancelado as exc:
+            exc.resultados_parciais = resultados
+            raise
 
-        # Começa na tela de Vendas (Fase 1)
-        stur.acessar_tela_vendas()
-        stur.garantir_coluna_localizador_visivel()
-
-        for arquivo in arquivos:
-            if deve_parar and deve_parar():
-                logger.warning("Parada solicitada — encerrando antes do próximo arquivo.")
-                raise ProcessamentoCancelado(resultados)
-
-            try:
-                resultado = processar_arquivo_aberto(
-                    arquivo=arquivo,
-                    excel_service=excel_service,
-                    stur=stur,
-                    financeiro=financeiro,
-                    logger=logger,
-                    deve_parar=deve_parar,
-                )
-            except ProcessamentoCancelado as exc:
-                exc.resultados_parciais = resultados
-                raise
-
-            resultados.append(resultado)
-
-            # Entre arquivos: volta para Vendas para o próximo
-            if arquivo != arquivos[-1]:
-                try:
-                    stur.acessar_tela_vendas()
-                    stur.garantir_coluna_localizador_visivel()
-                except Exception:
-                    logger.warning("Não foi possível retornar à tela de Vendas entre arquivos.")
+        resultados.append(resultado)
 
     return resultados
 
