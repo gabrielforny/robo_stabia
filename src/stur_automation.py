@@ -667,29 +667,86 @@ class SturAutomation:
             self.logger.info("Nenhum recebimento existente para editar.")
             return
 
-        self.logger.info("Abrindo edição do recebimento existente.")
-        botao_ok_rec = frame.locator(SELECTORS["botao_ok_recebimento"]).first
+        # Lê o tipo atual na tabela antes de qualquer ação
+        def _ler_tipo_na_tabela() -> str:
+            try:
+                return botao_visivel.evaluate(
+                    "btn => btn.closest('tr').cells[2].innerText"
+                ).strip()
+            except Exception as exc:
+                self.logger.warning("Não foi possível ler tipo de recebimento da tabela: %s", exc)
+                return ""
 
-        try:
-            botao_ok_rec.wait_for(state="visible", timeout=2000)
-            self.logger.info("Modal de recebimento já aberto.")
-        except PlaywrightTimeoutError:
-            botao_visivel.click(force=True)
-            self.esperar("abrir modal recebimento")
-            botao_ok_rec.wait_for(state="visible", timeout=10000)
+        tipo_atual = _ler_tipo_na_tabela()
+        self.logger.info("Tipo de recebimento na tabela: '%s'", tipo_atual)
+        if tipo_atual == "Faturado":
+            self.logger.info("Recebimento já está como Faturado na tabela — nenhuma ação necessária.")
+            return
 
-        radio_faturado = frame.locator(SELECTORS["radio_faturado_recebimento"]).first
-        radio_faturado.wait_for(state="visible", timeout=5000)
-        if not radio_faturado.is_checked():
-            self.logger.info("Selecionando radio Faturado.")
-            radio_faturado.click(force=True)
-            self.esperar("Faturado selecionado")
-        else:
-            self.logger.info("Radio Faturado já selecionado.")
+        MAX_TENTATIVAS = 3
+        for tentativa in range(1, MAX_TENTATIVAS + 1):
+            self.logger.info("Tentativa %d/%d para ajustar recebimento para Faturado.", tentativa, MAX_TENTATIVAS)
 
-        botao_ok_rec.click(force=True)
-        self.esperar("OK recebimento clicado")
-        self.logger.info("Recebimento ajustado para Faturado.")
+            # 1. Abre o modal (valida que realmente abriu)
+            botao_ok_rec = frame.locator(SELECTORS["botao_ok_recebimento"]).first
+            modal_aberto = False
+            try:
+                botao_ok_rec.wait_for(state="visible", timeout=2000)
+                modal_aberto = True
+                self.logger.info("Modal de recebimento já estava aberto.")
+            except PlaywrightTimeoutError:
+                pass
+
+            if not modal_aberto:
+                self.logger.info("Clicando no botão editar para abrir o modal.")
+                botao_visivel.click(force=True)
+                self.esperar("abrir modal recebimento")
+                try:
+                    botao_ok_rec.wait_for(state="visible", timeout=10000)
+                    self.logger.info("Modal de recebimento aberto com sucesso.")
+                except PlaywrightTimeoutError:
+                    self.logger.warning("Modal não abriu na tentativa %d — repetindo.", tentativa)
+                    self.esperar("aguardar antes de nova tentativa de abrir modal")
+                    continue
+
+            # 2. Seleciona o radio Faturado e valida que ficou marcado
+            radio_faturado = frame.locator(SELECTORS["radio_faturado_recebimento"]).first
+            try:
+                radio_faturado.wait_for(state="visible", timeout=5000)
+            except PlaywrightTimeoutError:
+                self.logger.warning("Radio Faturado não ficou visível na tentativa %d.", tentativa)
+                continue
+
+            if not radio_faturado.is_checked():
+                self.logger.info("Selecionando radio Faturado.")
+                radio_faturado.click(force=True)
+                self.esperar("Faturado selecionado")
+
+            if not radio_faturado.is_checked():
+                self.logger.warning("Radio Faturado não ficou marcado na tentativa %d — repetindo.", tentativa)
+                continue
+
+            self.logger.info("Radio Faturado confirmado como selecionado.")
+
+            # 3. Clica OK para fechar o modal
+            botao_ok_rec.click(force=True)
+            self.esperar("OK recebimento clicado")
+
+            # 4. Valida na tabela se a alteração foi persistida
+            tipo_apos = _ler_tipo_na_tabela()
+            self.logger.info("Tipo na tabela após tentativa %d: '%s'", tentativa, tipo_apos)
+            if tipo_apos == "Faturado":
+                self.logger.info("Recebimento ajustado para Faturado com sucesso.")
+                return
+
+            self.logger.warning(
+                "Tabela ainda mostra '%s' após tentativa %d — vai tentar novamente.", tipo_apos, tentativa
+            )
+            self.esperar("aguardar antes de nova tentativa")
+
+        raise RuntimeError(
+            f"Não foi possível ajustar o recebimento para Faturado após {MAX_TENTATIVAS} tentativas."
+        )
 
     def _abrir_novo_pagamento_fornecedor(self) -> None:
         frame = self._frame()
