@@ -411,6 +411,9 @@ def processar_arquivo_aberto(
                 "Processamento interrompido pelo usuário — progresso parcial salvo em: %s", arquivo
             )
             raise
+        except Exception:
+            logger.exception("Erro inesperado durante processamento do arquivo %s", arquivo)
+            raise
 
     excel_service.salvar_saida(df, arquivo)
     arquivo_saida = excel_service.salvar_no_local_com_cores(df, arquivo)
@@ -488,6 +491,9 @@ def processar_arquivos(
             )
         except ProcessamentoCancelado as exc:
             exc.resultados_parciais = resultados
+            raise
+        except Exception:
+            logger.exception("Erro inesperado ao processar %s", arquivo)
             raise
 
         resultados.append(resultado)

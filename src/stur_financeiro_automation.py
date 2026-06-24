@@ -8,6 +8,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Optional
 
 from playwright.sync_api import FrameLocator, Locator, Page
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 
 @dataclass(slots=True)
@@ -61,9 +62,37 @@ class SturFinanceiroAutomation:
     # ==========================================================
     def acessar_tela_conferencias_baixas(self) -> None:
         self.logger.info("Navegando para Conferências e Baixas por Conferência")
-        # Aguarda o menu Financeiro estar carregado (garante que index.aspx inicializou o JS)
         self.page.locator(self.MENU_FINANCEIRO).wait_for(state="visible", timeout=30000)
-        self.page.evaluate("Redirecionar('ListaConferencias.aspx?fcf')")
+
+        # Tenta clicar pelo menu real; se falhar usa Redirecionar com retry
+        navegou = False
+        try:
+            self.page.locator(self.MENU_FINANCEIRO).hover()
+            self.esperar("hover menu Financeiro")
+            self.page.locator(self.MENU_CONFERENCIAS_E_BAIXAS).click()
+            self.esperar("submenu Conferências aberto")
+            self.page.locator(self.MENU_CONFERENCIAS_POR_CONFERENCIA).click()
+            navegou = True
+            self.logger.info("Navegação por menu concluída.")
+        except Exception:
+            self.logger.warning("Hover/click no menu falhou. Tentando via Redirecionar.")
+
+        if not navegou:
+            for tentativa in range(1, 4):
+                try:
+                    self.page.wait_for_load_state("domcontentloaded", timeout=10000)
+                    self.page.evaluate("Redirecionar('ListaConferencias.aspx?fcf')")
+                    navegou = True
+                    break
+                except Exception as exc:
+                    self.logger.warning(
+                        "Redirecionar falhou na tentativa %d: %s", tentativa, exc
+                    )
+                    self.esperar("aguardar antes de nova tentativa de navegação")
+
+        if not navegou:
+            raise RuntimeError("Não foi possível navegar para a tela de Conferências após 3 tentativas.")
+
         self.esperar("redirecionamento para ListaConferencias")
         self.aguardar_tela_conferencias()
         self.logger.info("Tela de Conferências e Baixas carregada.")
