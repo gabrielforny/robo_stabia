@@ -9,6 +9,7 @@ from typing import Optional
 
 from playwright.sync_api import FrameLocator, Locator, Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from datetime import date
 
 
 @dataclass(slots=True)
@@ -385,6 +386,35 @@ class SturFinanceiroAutomation:
         rad_cliente.wait_for(state="visible", timeout=20000)
         rad_cliente.click()
         self.esperar("Clientes selecionado")
+
+        hoje = date.today()
+        mes_ini = hoje.month - 3
+        ano_ini = hoje.year
+        if mes_ini <= 0:
+            mes_ini += 12
+            ano_ini -= 1
+        data_ini = f"01/{mes_ini:02d}/{ano_ini}"
+
+        mes_fim = hoje.month + 9
+        ano_fim = hoje.year
+        if mes_fim > 12:
+            mes_fim -= 12
+            ano_fim += 1
+        data_fim = f"01/{mes_fim:02d}/{ano_fim}"
+
+        self.logger.info(f"Preenchendo vencimento: De {data_ini} Até {data_fim}")
+
+        edt_ini = frame2.locator("#c0_PH1_UsrSelecaoVencimento_UsrTextBoxData1_Edt")
+        edt_ini.wait_for(state="visible", timeout=10000)
+        edt_ini.fill(data_ini)
+        edt_ini.dispatch_event("change")
+
+        edt_fim = frame2.locator("#c0_PH1_UsrSelecaoVencimento_UsrTextBoxData2_Edt")
+        edt_fim.wait_for(state="visible", timeout=10000)
+        edt_fim.fill(data_fim)
+        edt_fim.dispatch_event("change")
+
+        self.esperar("datas de vencimento preenchidas")
 
         btn_filtrar = frame2.locator("#c0_PH1_BtnFiltroTitulosOk")
         btn_filtrar.wait_for(state="visible", timeout=15000)
