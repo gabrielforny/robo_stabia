@@ -198,10 +198,10 @@ class ExcelService:
 
         for row_idx in range(2, ws.max_row + 1):
             resultado = str(ws.cell(row=row_idx, column=col_idx).value or "").strip().upper()
-            if resultado.startswith("OK"):
-                fill = _GREEN_FILL
-            elif resultado.startswith("ERRO"):
+            if "ERRO" in resultado:
                 fill = _RED_FILL
+            elif resultado.startswith("OK"):
+                fill = _GREEN_FILL
             elif "FATURADO" in resultado:
                 fill = _ORANGE_FILL
             else:
