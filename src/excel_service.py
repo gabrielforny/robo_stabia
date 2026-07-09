@@ -90,13 +90,26 @@ class ExcelService:
             if not estabelecimento or estabelecimento.lower() == "nan":
                 continue
 
-            # Pula linhas já processadas com sucesso (OK ou JÁ FATURADO)
+            # Decide se a linha deve ser pulada ou incluída com flag de venda já feita
+            venda_ja_ok = False
+            resultado_venda_anterior = ""
             if coluna_res in df.columns:
                 resultado_existente = str(row.get(coluna_res, "") or "").strip()
                 if resultado_existente and resultado_existente.lower() not in ("", "nan"):
                     r = resultado_existente.upper()
-                    if r.startswith("OK") or "FATURADO" in r:
+                    if "FATURADO" in r:
                         continue
+                    if r.startswith("OK") and "OK CONFERÊNCIA" in r:
+                        continue  # completamente processado — pula
+                    if r.startswith("OK VENDAS"):
+                        # Vendas OK mas conferência falhou — inclui só para fase 2
+                        venda_ja_ok = True
+                        # Preserva tudo antes do primeiro "ERRO" para reescrever limpo depois
+                        idx_erro = r.find("| ERRO")
+                        resultado_venda_anterior = resultado_existente[:idx_erro].strip().rstrip("|").strip() if idx_erro != -1 else resultado_existente
+                    elif r.startswith("OK"):
+                        continue  # outro OK desconhecido — pula por segurança
+                    # ERRO: inclui normalmente para retentar as duas fases
 
             data_excel = str(row.get(coluna_data, "") or "").strip() if coluna_data else ""
             data_stur = converter_data_excel_para_stur(data_excel)
@@ -139,6 +152,8 @@ class ExcelService:
                     extrato_conta=extrato_conta,
                     data_fatura=data_fatura,
                     codigo_autorizacao=codigo_autorizacao,
+                    venda_ja_ok=venda_ja_ok,
+                    resultado_venda_anterior=resultado_venda_anterior,
                 )
             )
 

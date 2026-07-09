@@ -119,6 +119,10 @@ def processar_latam_vendas(
                 logger.warning("Parada solicitada — interrompendo Fase 1 (Vendas).")
                 raise ProcessamentoCancelado()
 
+            if transacao.venda_ja_ok:
+                logger.info("Venda já OK para %s — pulando Fase 1.", transacao.localizador_extraido)
+                continue
+
             if not transacao.localizador_extraido:
                 excel_service.escrever_resultado(df, transacao, "ERRO | LATAM sem localizador extraído")
                 total_erro += 1
@@ -309,14 +313,25 @@ def processar_latam_conferencia(
                 )
 
                 if encontrado:
-                    excel_service.acrescentar_resultado(
-                        df, transacao,
-                        f"OK Conferência | {descricao_busca} | Loc {transacao.localizador_extraido}",
-                    )
+                    resultado_conf = f"OK Conferência | {descricao_busca} | Loc {transacao.localizador_extraido}"
+                    if transacao.venda_ja_ok:
+                        # Sobrescreve limpo: remove o ERRO Conferência anterior
+                        excel_service.escrever_resultado(
+                            df, transacao,
+                            f"{transacao.resultado_venda_anterior} | {resultado_conf}",
+                        )
+                    else:
+                        excel_service.acrescentar_resultado(df, transacao, resultado_conf)
                 else:
-                    excel_service.acrescentar_resultado(
-                        df, transacao, f"ERRO Conferência | {motivo}"
-                    )
+                    if transacao.venda_ja_ok:
+                        excel_service.escrever_resultado(
+                            df, transacao,
+                            f"{transacao.resultado_venda_anterior} | ERRO Conferência | {motivo}",
+                        )
+                    else:
+                        excel_service.acrescentar_resultado(
+                            df, transacao, f"ERRO Conferência | {motivo}"
+                        )
 
             financeiro.gravar_titulos()
             financeiro.gravar_conferencia()
