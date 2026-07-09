@@ -1,0 +1,5 @@
+2026-07-09 09:12:30,560 | INFO | robo_stur | Log iniciado em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/robo_stur_20260709_091230.log
+2026-07-09 09:12:30,561 | INFO | robo_stur | Iniciando processamento — fluxo LATAM: Vendas + Conferências
+2026-07-09 09:12:30,561 | INFO | robo_stur | Arquivos recebidos: ['/Users/gabrielfornydesouzamuniz/Documents/automacao-stur/Clara-transactions-Jun 23, 2026, 6_53_52 -finalizada-28-06-2026-23-43.xlsx']
+2026-07-09 09:12:30,561 | INFO | robo_stur | Iniciando processamento do arquivo: /Users/gabrielfornydesouzamuniz/Documents/automacao-stur/Clara-transactions-Jun 23, 2026, 6_53_52 -finalizada-28-06-2026-23-43.xlsx
+2026-07-09 09:12:30,606 | INFO | robo_stur | Aba/tipo carregado: 0 | Colunas: ['Data da Transação', 'Extrato da conta', 'Transação', 'Valor original', 'Moeda original', 'Valor em R$', 'Cartão', 'Alias Do Cartão', 'Status', 'Status de aprovação', 'Nome do aprovador', 'Nota do aprovador', 'Código de autorização', 'Categoria da Compra', 'Recibo', 'Nome dos Recibos', 'Titular', 'Grupos', 'Localização', 'Etiquetas', 'Descrição', 'Resultado Robo']

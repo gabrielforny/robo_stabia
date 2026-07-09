@@ -34,6 +34,8 @@ class Transacao:
     extrato_conta: str = ""
     data_fatura: str = ""
     codigo_autorizacao: str = ""
+    venda_ja_ok: bool = False
+    resultado_venda_anterior: str = ""
 
 
 @dataclass(slots=True)
