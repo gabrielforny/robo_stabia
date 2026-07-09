@@ -537,6 +537,132 @@ class SturFinanceiroAutomation:
         self.esperar("aguardando retorno à lista")
 
     # ==========================================================
+    # FLUXO HOTEL — CONFERÊNCIAS
+    # ==========================================================
+
+    def buscar_ou_criar_conferencia_hotel(
+        self,
+        descricao_busca: str,
+        descricao_criar: str,
+        data_fatura: str,
+    ) -> None:
+        """Busca conferência de hotelaria. Se existir, abre em edição; se não, cria nova."""
+        self.limpar_filtros_com_calma()
+        self.clicar_coluna("Descrição")
+        self.preencher_search(descricao_busca)
+
+        resultados = self.coletar_resultados_da_tabela()
+
+        if resultados:
+            self.logger.info("Conferência '%s' encontrada. Abrindo em edição.", descricao_busca)
+            self.clicar_editar_linha(resultados[0]["__linha_locator"])
+        else:
+            self.logger.info("Conferência '%s' não encontrada. Criando nova.", descricao_busca)
+            self._criar_nova_conferencia(descricao_criar, data_fatura)
+
+        self.esperar("conferência hotel aberta")
+
+    def habilitar_coluna_dados_integracao(self) -> None:
+        """Garante que a coluna 'Dados Integração' está visível na sub-tela de títulos."""
+        frame = self._frame()
+        self.logger.info("Verificando coluna Dados Integração na sub-tela de títulos")
+
+        col = frame.locator(
+            f"{self.GRID} th a",
+            has_text=re.compile(r"dados\s+integra", re.I),
+        )
+        if col.count() > 0 and col.first.is_visible():
+            self.logger.info("Coluna Dados Integração já visível")
+            return
+
+        self.logger.info("Habilitando coluna Dados Integração via ícone de colunas visíveis")
+        img_eye = frame.locator("#c0_PH1_ImgColunasVisiveis")
+        img_eye.wait_for(state="visible", timeout=15000)
+        img_eye.click()
+        self.esperar("painel colunas aberto")
+
+        chk = frame.locator("#c0_PH1_ChkDadosIntegracao")
+        if chk.count() == 0:
+            self.logger.warning(
+                "Checkbox #c0_PH1_ChkDadosIntegracao não encontrado — "
+                "tentando localizar por label 'Dados Integração'"
+            )
+            label = frame.locator("label", has_text=re.compile(r"dados.integra", re.I)).first
+            if label.count() > 0:
+                chk = label.locator("xpath=preceding-sibling::input[@type='checkbox']")
+                if chk.count() == 0:
+                    chk = label.locator("xpath=../input[@type='checkbox']")
+
+        chk.first.wait_for(state="visible", timeout=10000)
+        if not chk.first.is_checked():
+            chk.first.check(force=True)
+            self.esperar("Dados Integração marcado")
+
+        img_eye.click()
+        self.esperar("painel colunas fechado")
+        self.logger.info("Coluna Dados Integração habilitada com sucesso")
+
+    def buscar_e_selecionar_dados_integracao(
+        self,
+        observacao: str,
+        valor_excel=None,
+    ) -> tuple[bool, str]:
+        """
+        Busca pelo campo 'Dados Integração' na sub-tela de títulos e marca ChkSelecionado.
+        Retorna (sucesso, mensagem).
+        """
+        self.logger.info("Buscando Dados Integração nos títulos: %s", observacao)
+
+        self.clicar_coluna("Dados Integração")
+        self.preencher_search(observacao)
+
+        frame = self._frame()
+        grid = frame.locator(self.GRID)
+        grid.wait_for(state="visible", timeout=15000)
+
+        linhas = grid.locator("tr:has([id*='ChkSelecionado'])")
+
+        if linhas.count() == 0:
+            self.logger.warning("Dados Integração '%s' não encontrado nos títulos", observacao)
+            self.limpar_filtros_com_calma()
+            return False, f"Dados Integração '{observacao}' não encontrado nos títulos disponíveis"
+
+        linha = linhas.first
+
+        if valor_excel is not None:
+            valor_tabela = self._obter_valor_oficial_da_linha(linha)
+            if valor_tabela is not None:
+                from decimal import Decimal
+                valor_excel_dec = valor_excel if isinstance(valor_excel, Decimal) else self._parse_valor_decimal(str(valor_excel))
+                if valor_excel_dec is not None and abs(valor_tabela) != abs(valor_excel_dec):
+                    self.logger.warning(
+                        "Valor não bate | Dados Integração=%s | tabela=%s | excel=%s",
+                        observacao, valor_tabela, valor_excel,
+                    )
+                    self.limpar_filtros_com_calma()
+                    return False, f"valor não bate | Valor Oficial={valor_tabela} | Excel={valor_excel}"
+                self.logger.info(
+                    "Valor conferido | Dados Integração=%s | %s = %s", observacao, valor_tabela, valor_excel
+                )
+            else:
+                self.logger.warning(
+                    "Não foi possível ler Valor Oficial para Dados Integração=%s; prosseguindo sem validação",
+                    observacao,
+                )
+
+        chk = linha.locator("[id*='ChkSelecionado']")
+        if chk.count() > 0:
+            chk.first.check(force=True)
+            self.esperar("Dados Integração selecionado")
+            self.logger.info("Dados Integração '%s' marcado com sucesso", observacao)
+            self.limpar_filtros_com_calma()
+            return True, "OK"
+
+        self.logger.warning("ChkSelecionado não encontrado para Dados Integração '%s'", observacao)
+        self.limpar_filtros_com_calma()
+        return False, f"ChkSelecionado não encontrado para Dados Integração '{observacao}'"
+
+    # ==========================================================
     # UTILITÁRIOS
     # ==========================================================
     def _normalizar_texto(self, texto: str | None) -> str:

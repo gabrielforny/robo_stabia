@@ -7,7 +7,7 @@ import openpyxl
 from openpyxl.styles import PatternFill
 
 from config import AppConfig
-from models import Transacao
+from models import Transacao, TransacaoHotel
 
 _GREEN_FILL = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
 _RED_FILL = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
@@ -84,11 +84,18 @@ class ExcelService:
 
         transacoes: list[Transacao] = []
 
+        coluna_obs = self._resolver_coluna_observacao(df)
         coluna_res = self.config.coluna_resultado
         for index, row in df.iterrows():
             estabelecimento = str(row.get(coluna_estabelecimento, "") or "").strip()
             if not estabelecimento or estabelecimento.lower() == "nan":
                 continue
+
+            # Linhas com OBSERVAÇÃO preenchida são de Hotelaria — processadas separadamente
+            if coluna_obs:
+                obs = str(row.get(coluna_obs, "") or "").strip()
+                if obs and obs.lower() != "nan":
+                    continue
 
             # Pula linhas já processadas com sucesso (OK ou JÁ FATURADO)
             if coluna_res in df.columns:
@@ -213,6 +220,87 @@ class ExcelService:
         wb.save(saida)
         return saida
 
+
+    def montar_transacoes_hoteis(self, df: pd.DataFrame, origem_arquivo: str | None = None) -> list[TransacaoHotel]:
+        """Retorna transações de Hotelaria: linhas onde col V (OBSERVAÇÃO) está preenchida."""
+        from datetime import datetime
+
+        data_fatura_hoje = datetime.today().strftime("%d/%m/%Y")
+
+        coluna_obs = self._resolver_coluna_observacao(df)
+        if not coluna_obs:
+            return []
+
+        tipo_layout = self._identificar_layout(df)
+        coluna_estabelecimento = self._resolver_coluna_estabelecimento(df, tipo_layout=tipo_layout)
+        coluna_data = self._resolver_coluna_data_aprovacao(df, tipo_layout=tipo_layout)
+        coluna_valor = self._resolver_coluna_valor(df, tipo_layout=tipo_layout)
+        coluna_autorizacao = self._resolver_coluna_autorizacao(df)
+        coluna_titular = self._resolver_coluna_titular(df)
+        coluna_cliente = self._resolver_coluna_cliente(df)
+        coluna_res = self.config.coluna_resultado
+
+        transacoes: list[TransacaoHotel] = []
+
+        for index, row in df.iterrows():
+            observacao = str(row.get(coluna_obs, "") or "").strip()
+            if not observacao or observacao.lower() == "nan":
+                continue
+
+            if coluna_res in df.columns:
+                resultado_existente = str(row.get(coluna_res, "") or "").strip()
+                if resultado_existente and resultado_existente.lower() not in ("", "nan"):
+                    r = resultado_existente.upper()
+                    if r.startswith("OK") or "FATURADO" in r:
+                        continue
+
+            estabelecimento = str(row.get(coluna_estabelecimento, "") or "").strip()
+            data_excel = str(row.get(coluna_data, "") or "").strip() if coluna_data else ""
+            valor_excel = self._parse_decimal(row.get(coluna_valor)) if coluna_valor else None
+
+            codigo_autorizacao = str(row.get(coluna_autorizacao, "") or "").strip() if coluna_autorizacao else ""
+            if codigo_autorizacao.lower() == "nan":
+                codigo_autorizacao = ""
+
+            titular = str(row.get(coluna_titular, "") or "").strip() if coluna_titular else ""
+            if titular.lower() == "nan":
+                titular = ""
+
+            cliente = str(row.get(coluna_cliente, "") or "").strip() if coluna_cliente else ""
+            if cliente.lower() == "nan":
+                cliente = ""
+
+            transacoes.append(
+                TransacaoHotel(
+                    indice_planilha=index,
+                    linha_excel=index + 2,
+                    estabelecimento=estabelecimento,
+                    data_aprovacao=data_excel,
+                    valor_excel=valor_excel,
+                    codigo_autorizacao=codigo_autorizacao,
+                    titular=titular,
+                    observacao=observacao,
+                    cliente=cliente,
+                    data_fatura=data_fatura_hoje,
+                    origem_arquivo=origem_arquivo or "",
+                )
+            )
+
+        return transacoes
+
+    def escrever_discrepancia_hotel(
+        self,
+        df: pd.DataFrame,
+        transacao: TransacaoHotel,
+        valor_tabela: "Decimal | None",
+        diferenca: "Decimal | None",
+    ) -> None:
+        """Escreve valor_tabela (col X) e diferença (col Y) para linhas de hotel com discrepância."""
+        cols = list(df.columns)
+        if len(cols) > 23:
+            df.at[transacao.indice_planilha, cols[23]] = float(valor_tabela) if valor_tabela is not None else ""
+        if len(cols) > 24:
+            df.at[transacao.indice_planilha, cols[24]] = float(diferenca) if diferenca is not None else ""
 
     def obter_vencimento_capa(self, arquivo: Path) -> str | None:
         """
@@ -566,6 +654,18 @@ class ExcelService:
             if parsed is not None:
                 return parsed
         return None
+
+    def _resolver_coluna_observacao(self, df: pd.DataFrame) -> str | None:
+        candidatos = ["observacao", "observação", "obs", "obs."]
+        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="observação")
+
+    def _resolver_coluna_titular(self, df: pd.DataFrame) -> str | None:
+        candidatos = ["titular", "titular do cartao", "titular do cartão", "nome"]
+        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="titular")
+
+    def _resolver_coluna_cliente(self, df: pd.DataFrame) -> str | None:
+        candidatos = ["empresa", "cliente", "company", "nome empresa"]
+        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="cliente/empresa")
 
     def _normalizar_texto(self, texto: str) -> str:
         return (

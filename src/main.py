@@ -10,9 +10,10 @@ from pathlib import Path
 from config import load_config
 from excel_service import ExcelService
 from logger_config import setup_logger
-from models import ProcessamentoCancelado, ResultadoProcessamento, Transacao
+from models import ProcessamentoCancelado, ResultadoProcessamento, Transacao, TransacaoHotel
 from stur_automation import SturAutomation, VendaJaFaturadaError
 from stur_financeiro_automation import SturFinanceiroAutomation
+from stur_hoteis_automation import SturHoteisAutomation
 
 
 EXTENSOES_SUPORTADAS = {".xlsx", ".xls", ".csv"}
@@ -239,6 +240,209 @@ def processar_latam_vendas(
 
 
 # ==========================================================
+# FASE 1 HOTEL — VENDAS (Operacional → Vendas)
+# ==========================================================
+
+def processar_hoteis_vendas(
+    config,
+    headless: bool,
+    excel_service: ExcelService,
+    df,
+    transacoes_hotel: list[TransacaoHotel],
+    logger,
+    deve_parar=None,
+) -> tuple[int, int]:
+    """
+    Para cada item de Hotelaria: busca por Cód. Integração na tela de Vendas,
+    lê o estado de FORMAS DE RECEBIMENTO/PAGAMENTO e executa a ação adequada.
+
+    Estado 1 (completo e valor bate) → volta sem gravar.
+    Estado 2 (CCRAG com valor diferente) → grava discrepância nas colunas X/Y
+                                           e inicia sub-fluxo Extra Hotelaria.
+    Estado 3 (vazio) → adiciona Faturado + CCRAG → grava.
+    """
+    total_sucesso = 0
+    total_erro = 0
+    stur: SturHoteisAutomation | None = None
+
+    def _fechar_sessao():
+        nonlocal stur
+        if stur is not None:
+            try:
+                stur.__exit__(None, None, None)
+            except Exception:
+                pass
+            stur = None
+
+    def _abrir_nova_sessao():
+        nonlocal stur
+        _fechar_sessao()
+        s = SturHoteisAutomation(config=config, logger=logger, headless=headless)
+        s.__enter__()
+        try:
+            s.login()
+            s.acessar_tela_vendas()
+            s.habilitar_coluna_cod_integracao()
+        except Exception:
+            try:
+                s.__exit__(None, None, None)
+            except Exception:
+                pass
+            raise
+        stur = s
+
+    try:
+        _abrir_nova_sessao()
+
+        for transacao in transacoes_hotel:
+            if deve_parar and deve_parar():
+                logger.warning("Parada solicitada — interrompendo Fase 1 Hotel (Vendas).")
+                raise ProcessamentoCancelado()
+
+            ultima_exc: Exception | None = None
+            resultado_msg: str | None = None
+            foi_sucesso = False
+
+            for tentativa in range(1, MAX_TENTATIVAS_POR_ITEM + 1):
+                if deve_parar and deve_parar():
+                    raise ProcessamentoCancelado()
+
+                if tentativa > 1:
+                    logger.warning(
+                        "Tentativa %d/%d para Hotel obs=%s — reabrindo browser...",
+                        tentativa, MAX_TENTATIVAS_POR_ITEM, transacao.observacao,
+                    )
+                    try:
+                        _abrir_nova_sessao()
+                    except Exception as exc_sessao:
+                        logger.error(
+                            "Falha ao reabrir browser na tentativa %d: %s", tentativa, exc_sessao
+                        )
+                        ultima_exc = exc_sessao
+                        continue
+
+                logger.info(
+                    "Buscando Hotel Cód. Integração=%s%s",
+                    transacao.observacao,
+                    f" (tentativa {tentativa}/{MAX_TENTATIVAS_POR_ITEM})" if tentativa > 1 else "",
+                )
+
+                try:
+                    candidato = stur.buscar_hotel(transacao)
+                except Exception as exc:
+                    logger.warning(
+                        "Erro ao buscar Hotel obs=%s (tentativa %d/%d): %s",
+                        transacao.observacao, tentativa, MAX_TENTATIVAS_POR_ITEM, exc,
+                    )
+                    ultima_exc = exc
+                    continue
+
+                if candidato is None:
+                    resultado_msg = (
+                        f"ERRO | Hotel Cód. Integração={transacao.observacao} "
+                        f"não encontrado nas Vendas"
+                    )
+                    break  # não é falha de browser — não retentar
+
+                try:
+                    stur.abrir_edicao_venda(candidato)
+                    estado = stur.ler_estado_formas_rec_pag()
+
+                    tem_faturado = estado["tem_faturado"]
+                    tem_ccrag = estado["tem_ccrag"]
+                    valor_ccrag = estado["valor_ccrag"]
+
+                    # Estado 1 — completo e valor bate → somente volta
+                    if (
+                        tem_faturado and tem_ccrag
+                        and transacao.valor_excel is not None
+                        and valor_ccrag is not None
+                        and abs(valor_ccrag) == abs(transacao.valor_excel)
+                    ):
+                        stur.voltar_sem_gravar()
+                        resultado_msg = (
+                            f"JÁ FATURADO | Venda {candidato.codigo_venda} | "
+                            f"Cód.Int. {transacao.observacao}"
+                        )
+                        foi_sucesso = True
+                        ultima_exc = None
+                        break
+
+                    # Estado 2 — CCRAG com valor divergente → discrepância + Extra Hotelaria
+                    if (
+                        tem_ccrag
+                        and transacao.valor_excel is not None
+                        and valor_ccrag is not None
+                        and abs(valor_ccrag) != abs(transacao.valor_excel)
+                    ):
+                        diferenca = abs(transacao.valor_excel) - abs(valor_ccrag)
+                        logger.warning(
+                            "Discrepância Hotel | obs=%s | excel=%s | stur=%s | dif=%s",
+                            transacao.observacao, transacao.valor_excel, valor_ccrag, diferenca,
+                        )
+                        excel_service.escrever_discrepancia_hotel(
+                            df, transacao, valor_ccrag, diferenca
+                        )
+                        stur.voltar_sem_gravar()
+                        try:
+                            stur.executar_copiar_venda_extra(
+                                candidato, diferenca, transacao.observacao
+                            )
+                        except Exception as exc_extra:
+                            logger.warning(
+                                "Sub-fluxo Extra Hotelaria falhou para obs=%s: %s",
+                                transacao.observacao, exc_extra,
+                            )
+                        resultado_msg = (
+                            f"DISCREPÂNCIA | Venda {candidato.codigo_venda} | "
+                            f"Excel={transacao.valor_excel} | STUR={valor_ccrag} | Dif={diferenca}"
+                        )
+                        foi_sucesso = True
+                        ultima_exc = None
+                        break
+
+                    # Estado 3 — vazio → adicionar Faturado + CCRAG e gravar
+                    stur.adicionar_recebimento_faturado()
+                    stur.adicionar_pagamento_ccrag(
+                        codigo_autorizacao=transacao.codigo_autorizacao
+                    )
+                    stur.gravar_venda_hotel()
+                    resultado_msg = (
+                        f"OK Hotel Vendas | Venda {candidato.codigo_venda} | "
+                        f"Cód.Int. {transacao.observacao}"
+                    )
+                    foi_sucesso = True
+                    ultima_exc = None
+                    break
+
+                except Exception as exc:
+                    logger.warning(
+                        "Erro ao processar Hotel obs=%s (tentativa %d/%d): %s",
+                        transacao.observacao, tentativa, MAX_TENTATIVAS_POR_ITEM, exc,
+                    )
+                    ultima_exc = exc
+                    continue
+
+            if resultado_msg is None:
+                resultado_msg = (
+                    f"ERRO | {MAX_TENTATIVAS_POR_ITEM} tentativas falharam para "
+                    f"Hotel obs={transacao.observacao} | "
+                    f"{type(ultima_exc).__name__}: {ultima_exc}"
+                )
+
+            excel_service.escrever_resultado(df, transacao, resultado_msg)
+            if foi_sucesso:
+                total_sucesso += 1
+            else:
+                total_erro += 1
+
+    finally:
+        _fechar_sessao()
+
+    return total_sucesso, total_erro
+
+
+# ==========================================================
 # FASE 2 — CONFERÊNCIAS (Financeiro → Conferências e Baixas)
 # ==========================================================
 
@@ -337,6 +541,99 @@ def processar_latam_conferencia(
 
 
 # ==========================================================
+# FASE 2 HOTEL — CONFERÊNCIAS (Financeiro → Conferências e Baixas)
+# ==========================================================
+
+def processar_hoteis_conferencia(
+    financeiro: SturFinanceiroAutomation,
+    excel_service: ExcelService,
+    df,
+    transacoes_hotel: list[TransacaoHotel],
+    logger,
+    deve_parar=None,
+) -> None:
+    """
+    Agrupa os itens de Hotelaria por mês/ano de fatura, busca ou cria a conferência
+    "Hotelaria MM/AAAA", adiciona os títulos por Dados Integração e grava.
+    """
+    grupos: dict[str, list[TransacaoHotel]] = defaultdict(list)
+    sem_fatura: list[TransacaoHotel] = []
+
+    for t in transacoes_hotel:
+        if t.data_fatura:
+            partes = t.data_fatura.split("/")
+            chave = f"{partes[1]}/{partes[2]}" if len(partes) == 3 else t.data_fatura
+            grupos[chave].append(t)
+        else:
+            sem_fatura.append(t)
+
+    for t in sem_fatura:
+        excel_service.acrescentar_resultado(
+            df, t, "ERRO Conferência Hotel | sem data de fatura para identificar conferência"
+        )
+
+    for chave_mes, grupo in grupos.items():
+        if deve_parar and deve_parar():
+            logger.warning("Parada solicitada — interrompendo Fase 2 Hotel (Conferências).")
+            raise ProcessamentoCancelado()
+
+        descricao_busca = f"Hotelaria {chave_mes}"
+        descricao_criar = f"Hotelaria {chave_mes}"
+        data_fatura = grupo[0].data_fatura
+
+        logger.info(
+            "Processando conferência Hotel: %s | %d item(ns)", descricao_busca, len(grupo)
+        )
+
+        try:
+            financeiro.buscar_ou_criar_conferencia_hotel(
+                descricao_busca=descricao_busca,
+                descricao_criar=descricao_criar,
+                data_fatura=data_fatura,
+            )
+
+            financeiro.abrir_adicionar_titulos()
+            financeiro.habilitar_coluna_dados_integracao()
+
+            for transacao in grupo:
+                if deve_parar and deve_parar():
+                    logger.warning("Parada solicitada — interrompendo seleção de Dados Integração.")
+                    raise ProcessamentoCancelado()
+
+                encontrado, motivo = financeiro.buscar_e_selecionar_dados_integracao(
+                    observacao=transacao.observacao,
+                    valor_excel=transacao.valor_excel,
+                )
+
+                if encontrado:
+                    excel_service.acrescentar_resultado(
+                        df, transacao,
+                        f"OK Conferência Hotel | {descricao_busca} | Cód.Int. {transacao.observacao}",
+                    )
+                else:
+                    excel_service.acrescentar_resultado(
+                        df, transacao, f"ERRO Conferência Hotel | {motivo}"
+                    )
+
+            financeiro.gravar_titulos()
+            financeiro.gravar_conferencia()
+
+        except ProcessamentoCancelado:
+            raise
+        except Exception as exc:
+            logger.exception("Erro no processamento da conferência Hotel %s", descricao_busca)
+            for transacao in grupo:
+                excel_service.acrescentar_resultado(
+                    df, transacao,
+                    f"ERRO Conferência Hotel inesperado | {type(exc).__name__}: {exc}",
+                )
+            try:
+                financeiro.limpar_filtros_com_calma()
+            except Exception:
+                logger.warning("Não foi possível limpar filtros após erro Hotel.")
+
+
+# ==========================================================
 # ORQUESTRAÇÃO POR ARQUIVO
 # ==========================================================
 
@@ -354,40 +651,58 @@ def processar_arquivo_aberto(
     logger.info("Aba/tipo carregado: %s | Colunas: %s", aba, list(df.columns))
 
     transacoes = excel_service.montar_transacoes(df, origem_arquivo=arquivo.name)
-    logger.info("Total de linhas a processar: %d", len(transacoes))
+    transacoes_hotel = excel_service.montar_transacoes_hoteis(df, origem_arquivo=arquivo.name)
+    logger.info("Total de linhas LATAM/GOL/AZUL: %d", len(transacoes))
+    logger.info("Total de linhas Hotelaria: %d", len(transacoes_hotel))
 
     transacoes_latam = [t for t in transacoes if t.tipo_busca in COMPANHIAS_SUPORTADAS]
     transacoes_outras = [t for t in transacoes if t.tipo_busca not in COMPANHIAS_SUPORTADAS]
 
     logger.info(
-        "LATAM/GOL/AZUL: %d | Outros (ignorados nesta versão): %d",
-        len(transacoes_latam), len(transacoes_outras),
+        "LATAM/GOL/AZUL: %d | Outros (ignorados nesta versão): %d | Hotelaria: %d",
+        len(transacoes_latam), len(transacoes_outras), len(transacoes_hotel),
     )
 
     total_sucesso = 0
     total_erro = 0
 
-    if transacoes_latam:
+    if transacoes_latam or transacoes_hotel:
         try:
-            # Fase 1: Vendas — gerencia o próprio browser com retry por item
-            logger.info("=== FASE 1: Vendas ===")
-            sucesso_v, erro_v = processar_latam_vendas(
-                config=config,
-                headless=headless,
-                excel_service=excel_service,
-                df=df,
-                transacoes_latam=transacoes_latam,
-                logger=logger,
-                deve_parar=deve_parar,
-            )
-            total_sucesso += sucesso_v
-            total_erro += erro_v
+            # Fase 1 LATAM: Vendas
+            if transacoes_latam:
+                logger.info("=== FASE 1: Vendas LATAM/GOL/AZUL ===")
+                sucesso_v, erro_v = processar_latam_vendas(
+                    config=config,
+                    headless=headless,
+                    excel_service=excel_service,
+                    df=df,
+                    transacoes_latam=transacoes_latam,
+                    logger=logger,
+                    deve_parar=deve_parar,
+                )
+                total_sucesso += sucesso_v
+                total_erro += erro_v
+
+            # Fase 1 Hotel: Vendas
+            if transacoes_hotel:
+                logger.info("=== FASE 1: Vendas Hotelaria ===")
+                sucesso_h, erro_h = processar_hoteis_vendas(
+                    config=config,
+                    headless=headless,
+                    excel_service=excel_service,
+                    df=df,
+                    transacoes_hotel=transacoes_hotel,
+                    logger=logger,
+                    deve_parar=deve_parar,
+                )
+                total_sucesso += sucesso_h
+                total_erro += erro_h
 
             arquivo_parcial = excel_service.salvar_saida(df, arquivo)
             logger.info("Backup parcial (pós Vendas) salvo em: %s", arquivo_parcial)
             excel_service.salvar_no_local_com_cores(df, arquivo)
 
-            # Fase 2: Conferências — nova sessão de browser
+            # Fase 2: Conferências (LATAM + Hotel na mesma sessão de browser)
             logger.info("=== FASE 2: Conferências ===")
             with SturAutomation(config=config, logger=logger, headless=headless) as stur_conf:
                 stur_conf.login()
@@ -397,14 +712,27 @@ def processar_arquivo_aberto(
                     espera_padrao_segundos=3,
                 )
                 financeiro.acessar_tela_conferencias_baixas()
-                processar_latam_conferencia(
-                    financeiro=financeiro,
-                    excel_service=excel_service,
-                    df=df,
-                    transacoes_latam=transacoes_latam,
-                    logger=logger,
-                    deve_parar=deve_parar,
-                )
+
+                if transacoes_latam:
+                    processar_latam_conferencia(
+                        financeiro=financeiro,
+                        excel_service=excel_service,
+                        df=df,
+                        transacoes_latam=transacoes_latam,
+                        logger=logger,
+                        deve_parar=deve_parar,
+                    )
+
+                if transacoes_hotel:
+                    processar_hoteis_conferencia(
+                        financeiro=financeiro,
+                        excel_service=excel_service,
+                        df=df,
+                        transacoes_hotel=transacoes_hotel,
+                        logger=logger,
+                        deve_parar=deve_parar,
+                    )
+
         except ProcessamentoCancelado:
             excel_service.salvar_no_local_com_cores(df, arquivo)
             logger.warning(
@@ -430,7 +758,7 @@ def processar_arquivo_aberto(
 
     return ResultadoProcessamento(
         arquivo_saida=arquivo_saida,
-        total_linhas=len(transacoes_latam),
+        total_linhas=len(transacoes_latam) + len(transacoes_hotel),
         total_sucesso=total_sucesso,
         total_erro=total_erro,
     )
@@ -517,6 +845,17 @@ def resolver_arquivos(args) -> list[Path]:
 
     if args.pasta:
         return listar_arquivos_da_pasta(Path(args.pasta))
+
+    # Arquivos escolhidos explicitamente pelos pickers da GUI (deduplicados por caminho)
+    arquivos_gui: list[Path] = []
+    for attr in ("arquivo_latam", "arquivo_hoteis"):
+        caminho = getattr(args, attr, None)
+        if caminho:
+            p = Path(caminho)
+            if p not in arquivos_gui:
+                arquivos_gui.append(p)
+    if arquivos_gui:
+        return arquivos_gui
 
     # Padrão: pasta ~/Documents/automacao-stur — pega só o arquivo mais recente.
     # Sem fallback para Downloads/projeto: se a pasta não existir ou estiver vazia,

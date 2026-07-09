@@ -37,6 +37,21 @@ class Transacao:
 
 
 @dataclass(slots=True)
+class TransacaoHotel:
+    indice_planilha: int
+    linha_excel: int
+    estabelecimento: str
+    data_aprovacao: str
+    valor_excel: Decimal | None
+    codigo_autorizacao: str
+    titular: str
+    observacao: str          # col V — chave de busca "Cod. Integração" no STUR
+    cliente: str             # col W — filtro por empresa no STUR
+    data_fatura: str         # data de hoje no formato dd/mm/aaaa
+    origem_arquivo: str = ""
+
+
+@dataclass(slots=True)
 class CandidatoVenda:
     indice_tabela: int
     codigo_venda: str | None

@@ -27,12 +27,14 @@ class _QueueHandler(logging.Handler):
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Robô STUR — LATAM")
-        self.geometry("860x560")
-        self.minsize(700, 450)
+        self.title("Robô STUR — LATAM / Hotelaria")
+        self.geometry("860x600")
+        self.minsize(700, 480)
         self.configure(bg="#f5f5f5")
         self._log_queue: queue.Queue = queue.Queue()
         self._stop_event = threading.Event()
+        self._arquivo_latam: str | None = None
+        self._arquivo_hoteis: str | None = None
         self._build_ui()
         self._poll_logs()
 
@@ -83,6 +85,37 @@ class App(tk.Tk):
             fg="#555", bg="#f5f5f5",
         )
         self.lbl_status.pack(side=tk.LEFT, padx=16)
+
+        # ── seleção de arquivos ───────────────────────────────────────
+        files_frame = tk.Frame(self, bg="#f5f5f5", padx=14, pady=4)
+        files_frame.pack(fill=tk.X)
+
+        def _criar_picker_row(parent, label_text, lbl_attr, cmd_escolher, cmd_limpar):
+            row = tk.Frame(parent, bg="#f5f5f5")
+            row.pack(fill=tk.X, pady=2)
+            tk.Label(row, text=label_text, width=18, anchor="w",
+                     font=("Helvetica", 10), bg="#f5f5f5", fg="#333").pack(side=tk.LEFT)
+            lbl = tk.Label(row, text="(auto-detecção)", font=("Helvetica", 10),
+                           fg="#999", bg="#ebebeb", relief=tk.SUNKEN, anchor="w", padx=6)
+            lbl.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 4))
+            tk.Button(row, text="Escolher…", font=("Helvetica", 10),
+                      command=cmd_escolher, padx=8).pack(side=tk.LEFT)
+            tk.Button(row, text="✕", font=("Helvetica", 10), fg="#c62828",
+                      command=cmd_limpar, padx=6).pack(side=tk.LEFT, padx=(2, 0))
+            setattr(self, lbl_attr, lbl)
+
+        _criar_picker_row(
+            files_frame, "LATAM / GOL / AZUL:",
+            "lbl_arquivo_latam",
+            self._escolher_arquivo_latam,
+            self._limpar_arquivo_latam,
+        )
+        _criar_picker_row(
+            files_frame, "Hotelaria:",
+            "lbl_arquivo_hoteis",
+            self._escolher_arquivo_hoteis,
+            self._limpar_arquivo_hoteis,
+        )
 
         # ── área de log ───────────────────────────────────────────────
         self.txt_log = scrolledtext.ScrolledText(
@@ -174,7 +207,12 @@ class App(tk.Tk):
             )
             logger.addHandler(handler)
 
-            args = argparse.Namespace(arquivo=None, pasta=None)
+            args = argparse.Namespace(
+                arquivo=None,
+                pasta=None,
+                arquivo_latam=self._arquivo_latam,
+                arquivo_hoteis=self._arquivo_hoteis,
+            )
             arquivos = resolver_arquivos(args)
 
             if not arquivos:
@@ -200,6 +238,34 @@ class App(tk.Tk):
             self._log(f"ERRO FATAL: {exc}", "ERROR")
             self._log(traceback.format_exc(), "ERROR")
             self.after(0, self._finalizar_erro, str(exc))
+
+    def _escolher_arquivo_latam(self):
+        from tkinter import filedialog
+        caminho = filedialog.askopenfilename(
+            title="Selecionar arquivo LATAM / GOL / AZUL",
+            filetypes=[("Planilhas Excel", "*.xlsx *.xls"), ("CSV", "*.csv"), ("Todos", "*.*")],
+        )
+        if caminho:
+            self._arquivo_latam = caminho
+            self.lbl_arquivo_latam.config(text=Path(caminho).name, fg="#1565c0", bg="#e3f2fd")
+
+    def _limpar_arquivo_latam(self):
+        self._arquivo_latam = None
+        self.lbl_arquivo_latam.config(text="(auto-detecção)", fg="#999", bg="#ebebeb")
+
+    def _escolher_arquivo_hoteis(self):
+        from tkinter import filedialog
+        caminho = filedialog.askopenfilename(
+            title="Selecionar arquivo Hotelaria",
+            filetypes=[("Planilhas Excel", "*.xlsx *.xls"), ("CSV", "*.csv"), ("Todos", "*.*")],
+        )
+        if caminho:
+            self._arquivo_hoteis = caminho
+            self.lbl_arquivo_hoteis.config(text=Path(caminho).name, fg="#1565c0", bg="#e3f2fd")
+
+    def _limpar_arquivo_hoteis(self):
+        self._arquivo_hoteis = None
+        self.lbl_arquivo_hoteis.config(text="(auto-detecção)", fg="#999", bg="#ebebeb")
 
     def _garantir_playwright(self):
         """
