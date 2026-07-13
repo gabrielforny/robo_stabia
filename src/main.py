@@ -390,7 +390,8 @@ def processar_hoteis_vendas(
                         stur.voltar_sem_gravar()
                         try:
                             stur.executar_copiar_venda_extra(
-                                candidato, diferenca, transacao.observacao
+                                candidato, diferenca, transacao.observacao,
+                                transacao.codigo_autorizacao,
                             )
                         except Exception as exc_extra:
                             logger.warning(

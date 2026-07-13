@@ -26,8 +26,13 @@ SELECTORS_HOTEL = {
     "botao_ok_copia": "#c0_PH1_BtnOkCopia",
 
     # Tela Vendas de Hotelaria - Inclusão
-    "campo_cod_integracao_inclusao": "#c0_PH1_EdtCodIntegracao",
-    "botao_gravar_inclusao": "#c0_PH1_URE1_BtnGravar",
+    "campo_cod_integracao_inclusao": "#c0_PH1_UsrCabecVenda1_EDCH",
+    "botao_gravar_inclusao":         "#c0_PH1_UsrRodapeEdicao1_BtnGravar",
+    "botao_gravar_confirmacao":      "#c0_PH1_UsrRodapeEdicao1_BtnFuncao",
+    "botao_ok_vc":                   "#c0_PH1_BtnOkVC",
+    "label_erro_gravacao":           "#c0_PH1_Label5",
+    "grid_confirmacao":              "#c0_PH1_GridView1",
+    "botao_confirmar":               "#c0_PH1_BtnConfirmar",
 }
 
 # Valor do option "EXTRA HOTELARIA" no select de produto
@@ -291,6 +296,7 @@ class SturHoteisAutomation(SturAutomation):
         candidato: CandidatoVenda,
         diferenca: Decimal,
         observacao: str,
+        codigo_autorizacao: str = "",
     ) -> None:
         """
         Sub-fluxo para discrepância entre valor da planilha e valor do STUR:
@@ -345,69 +351,144 @@ class SturHoteisAutomation(SturAutomation):
         self.esperar("OK Copiar Venda")
 
         # --- 4-6. Tela Vendas de Hotelaria - Inclusão ---
-        self._preencher_inclusao_extra_hotelaria(observacao=observacao, diferenca=diferenca)
+        self._preencher_inclusao_extra_hotelaria(
+            observacao=observacao,
+            diferenca=diferenca,
+            codigo_autorizacao=codigo_autorizacao,
+        )
 
-    def _preencher_inclusao_extra_hotelaria(self, observacao: str, diferenca: Decimal) -> None:
+    def _preencher_inclusao_extra_hotelaria(
+        self, observacao: str, diferenca: Decimal, codigo_autorizacao: str = ""
+    ) -> None:
         """
-        Preenche 'Vendas de Hotelaria - Inclusão':
-        cód. integração → editar linha → zerar diárias → zerar taxas →
-        colocar diferença → OK (aceitar alert) → Gravar →
-        adicionar Faturado + CCRAG na nova venda criada.
-
-        ATENÇÃO: os seletores dos campos de diárias/taxas/valor extra precisam ser
-        confirmados na tela real antes de colocar em produção.
-        Os seletores marcados com # TODO são estimativas baseadas no padrão STUR.
+        Preenche 'Vendas de Hotelaria - Inclusão' após Copiar Venda:
+        cód. integração → editar hóspede → editar apartamento → zerar diárias →
+        OK → zerar taxas → digitar diferença → + → OK (aceita alert de duplicata) →
+        validar erro de gravação → Faturado + CCRAG → Gravar e Ir para Confirmação →
+        selecionar EXTRA HOTELARIA RESERVADA Definido → Confirmar.
         """
         frame = self._frame()
-        self.logger.info("Preenchendo Vendas de Hotelaria - Inclusão | obs=%s | dif=%s", observacao, diferenca)
+        page = self._page()
+        self.logger.info(
+            "Preenchendo Vendas de Hotelaria - Inclusão | obs=%s | dif=%s", observacao, diferenca
+        )
 
-        # Aguarda tela carregar (botão Gravar como âncora)
-        try:
-            frame.locator(SELECTORS_HOTEL["botao_gravar_inclusao"]).first.wait_for(
-                state="visible", timeout=20000
-            )
-        except PlaywrightTimeoutError:
-            self.logger.warning(
-                "Botão Gravar da Inclusão não encontrado — verificar se a tela abriu corretamente."
-            )
-            raise
+        # Aguarda tela carregar
+        frame.locator(SELECTORS_HOTEL["botao_gravar_inclusao"]).first.wait_for(
+            state="visible", timeout=20000
+        )
 
         # Cód. Integração
         campo_cod = frame.locator(SELECTORS_HOTEL["campo_cod_integracao_inclusao"]).first
-        if campo_cod.count() > 0:
-            campo_cod.triple_click()
-            campo_cod.fill(observacao)
-            self.esperar("Cód. Integração preenchido")
+        campo_cod.triple_click()
+        campo_cod.fill(observacao)
+        self.esperar("Cód. Integração preenchido")
 
-        # Editar primeira linha da tabela de hospedagem
-        botao_editar = frame.locator("input[id*='ImgEditar']").first
-        botao_editar.wait_for(state="visible", timeout=10000)
-        botao_editar.click(force=True)
-        self.esperar("modal edição linha hotelaria aberto")
+        # Editar hóspede (GrdPax)
+        botao_pax = frame.locator("input[id*='GrdPax'][id*='ImgEditar']").first
+        botao_pax.wait_for(state="visible", timeout=10000)
+        botao_pax.click(force=True)
+        self.esperar("tela edição hóspede aberta")
 
-        # Segundo clique em editar dentro do modal (conforme RTF)
-        botao_editar_interno = frame.locator("input[id*='ImgEditar']").nth(1)
-        if botao_editar_interno.count() > 0:
-            try:
-                botao_editar_interno.wait_for(state="visible", timeout=3000)
-                botao_editar_interno.click(force=True)
-                self.esperar("segundo clique em editar dentro do modal")
-            except PlaywrightTimeoutError:
-                pass
+        # Editar apartamento (abre modal de diárias)
+        botao_apto = frame.locator("input[id*='GrdAptosCli'][id*='ImgEditar']").first
+        botao_apto.wait_for(state="visible", timeout=10000)
+        botao_apto.click(force=True)
+        self.esperar("modal edição apartamento aberto")
 
-        # TODO: zerar campos de diárias — seletores a confirmar na tela real
-        # Padrão esperado: input[id*='EdtDiaria'] ou similar
-        self.logger.warning(
-            "TODO: zerar diárias e taxas da linha de hospedagem — seletores não confirmados. "
-            "Diferença a lançar: %s", diferenca,
+        # Zerar diária cliente e fornecedor
+        for selector in (
+            "#c0_PH1_UTVH_UsrVlrDiariaCli_ED",
+            "#c0_PH1_UTVH_UsrVlrDiariaFor_ED",
+        ):
+            campo = frame.locator(selector).first
+            campo.wait_for(state="visible", timeout=10000)
+            campo.triple_click()
+            campo.fill("0,00")
+        self.esperar("diárias zeradas")
+
+        # OK do modal de apartamento
+        frame.locator("#c0_PH1_UTVH_BtnOk").first.click(force=True)
+        self.esperar("modal apartamento confirmado")
+
+        # Zerar taxas
+        campo_taxas = frame.locator("#c0_PH1_UTVH_UsrTaxasCli_ED").first
+        campo_taxas.wait_for(state="visible", timeout=10000)
+        campo_taxas.triple_click()
+        campo_taxas.fill("0,00")
+        self.esperar("taxas zeradas")
+
+        # Digitar diferença no campo Extra
+        valor_str = f"{diferenca:.2f}".replace(".", ",")
+        campo_extra = frame.locator("#c0_PH1_UTVH_UsrTxExtraCli_ED").first
+        campo_extra.triple_click()
+        campo_extra.fill(valor_str)
+        self.esperar("valor extra preenchido")
+
+        # Clicar "+" (adicionar outras taxas / confirmar extra)
+        frame.locator("#c0_PH1_UTVH_ImgEC").first.click(force=True)
+        self.esperar("extras adicionados")
+
+        # OK da tela de hospedagem — aceita alert de reserva duplicada se aparecer
+        def _aceitar_dialog(dialog):
+            self.logger.info("Alert BtnOkVC: %s — aceitando", dialog.message[:120])
+            dialog.accept()
+
+        page.once("dialog", _aceitar_dialog)
+        frame.locator(SELECTORS_HOTEL["botao_ok_vc"]).first.click(force=True)
+        self.esperar("BtnOkVC confirmado")
+
+        # Verificar erro de gravação (coordenador inativo etc.)
+        label_erro = frame.locator(SELECTORS_HOTEL["label_erro_gravacao"])
+        try:
+            label_erro.wait_for(state="visible", timeout=3000)
+            texto_erro = (label_erro.text_content() or "").strip()
+            if "Problemas na gravação" in texto_erro:
+                raise RuntimeError(f"Erro de gravação STUR: {texto_erro}")
+        except PlaywrightTimeoutError:
+            pass  # sem erro — continua
+
+        # Faturado + CCRAG na nova venda
+        self.adicionar_recebimento_faturado()
+        self.adicionar_pagamento_ccrag(codigo_autorizacao=codigo_autorizacao)
+
+        # Gravar e Ir para Confirmação (fallback: Gravar)
+        botao_func = frame.locator(SELECTORS_HOTEL["botao_gravar_confirmacao"]).first
+        try:
+            botao_func.wait_for(state="visible", timeout=5000)
+            botao_func.click(force=True)
+        except PlaywrightTimeoutError:
+            frame.locator(SELECTORS_HOTEL["botao_gravar_inclusao"]).first.click(force=True)
+        self.esperar("gravando Extra Hotelaria")
+
+        # Tela de Confirmação — seleciona EXTRA HOTELARIA RESERVADA com formas Definidas
+        frame = self._frame()
+        grid_conf = frame.locator(SELECTORS_HOTEL["grid_confirmacao"])
+        grid_conf.wait_for(state="visible", timeout=20000)
+
+        checkbox_alvo = None
+        for linha in grid_conf.locator("tr").all():
+            texto = (linha.text_content() or "").upper()
+            if "EXTRA HOTELARIA" not in texto or "RESERVADA" not in texto:
+                continue
+            chk = linha.locator("input[type='checkbox']").first
+            if chk.count() == 0:
+                continue
+            onclick_val = chk.get_attribute("onclick") or ""
+            if "alert(" not in onclick_val:
+                checkbox_alvo = chk
+                break
+
+        if checkbox_alvo is None:
+            raise RuntimeError(
+                "Linha EXTRA HOTELARIA RESERVADA com formas Definidas não encontrada na tela de Confirmação"
+            )
+
+        checkbox_alvo.check(force=True)
+        self.esperar("EXTRA HOTELARIA selecionado")
+
+        frame.locator(SELECTORS_HOTEL["botao_confirmar"]).first.click(force=True)
+        self.esperar("Extra Hotelaria confirmado")
+        self.logger.info(
+            "Extra Hotelaria concluído | obs=%s | dif=%s", observacao, diferenca
         )
-
-        # TODO: digitar diferença no campo correto (estimativa: EdtExtra ou similar)
-        # TODO: clicar OK com tratamento de alert do browser
-        # TODO: zerar taxas na tela anterior
-        # TODO: clicar Gravar
-
-        # Quando esses TODOs estiverem implementados, a sequência final é:
-        # self.adicionar_recebimento_faturado()
-        # self.adicionar_pagamento_ccrag(codigo_autorizacao="")
-        # self.gravar_venda_hotel()
