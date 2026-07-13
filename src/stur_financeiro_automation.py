@@ -486,38 +486,52 @@ class SturFinanceiroAutomation:
             self.limpar_filtros_com_calma()
             return False, f"localizador {localizador} não encontrado nos títulos disponíveis"
 
-        linha = linhas.first
+        total_linhas = linhas.count()
+        self.logger.info("Localizador %s — %d linha(s) encontrada(s) na grid", localizador, total_linhas)
 
-        # Valida Valor Oficial antes de marcar
+        # Soma os valores de todas as linhas para validar contra o Excel
         if valor_excel is not None:
-            valor_tabela = self._obter_valor_oficial_da_linha(linha)
-            if valor_tabela is not None:
-                if abs(valor_tabela) != abs(valor_excel):
+            soma_tabela: Decimal | None = Decimal("0")
+            for i in range(total_linhas):
+                vt = self._obter_valor_oficial_da_linha(linhas.nth(i))
+                if vt is None:
+                    soma_tabela = None  # não conseguiu ler alguma linha — pula validação
+                    self.logger.warning("Não foi possível ler Valor Oficial da linha %d; pulando validação", i)
+                    break
+                soma_tabela += abs(vt)
+
+            if soma_tabela is not None:
+                if soma_tabela != abs(valor_excel):
                     self.logger.warning(
-                        "Valor não bate | localizador=%s | tabela=%s | excel=%s",
-                        localizador, valor_tabela, valor_excel,
+                        "Valor não bate | localizador=%s | soma tabela=%s | excel=%s",
+                        localizador, soma_tabela, valor_excel,
                     )
                     self.limpar_filtros_com_calma()
                     return False, (
-                        f"valor não bate | Valor Oficial={valor_tabela} | Excel={valor_excel}"
+                        f"valor não bate | Valor Oficial={[str(soma_tabela)]} | Excel={valor_excel}"
                     )
                 self.logger.info(
-                    "Valor conferido | localizador=%s | %s = %s", localizador, valor_tabela, valor_excel
+                    "Valor conferido | localizador=%s | soma=%s = %s", localizador, soma_tabela, valor_excel
                 )
+
+        # Marca o checkbox de todas as linhas encontradas
+        marcados = 0
+        for i in range(total_linhas):
+            chk = linhas.nth(i).locator("[id*='ChkSelecionado']")
+            if chk.count() > 0:
+                chk.first.check(force=True)
+                marcados += 1
             else:
-                self.logger.warning("Não foi possível ler Valor Oficial da linha; prosseguindo sem validação")
+                self.logger.warning("ChkSelecionado não encontrado na linha %d do localizador %s", i, localizador)
 
-        chk = linha.locator("[id*='ChkSelecionado']")
-        if chk.count() > 0:
-            chk.first.check(force=True)
-            self.esperar("localizador selecionado")
-            self.logger.info("Localizador %s marcado com sucesso", localizador)
+        if marcados == 0:
             self.limpar_filtros_com_calma()
-            return True, "OK"
+            return False, f"ChkSelecionado não encontrado em nenhuma linha do localizador {localizador}"
 
-        self.logger.warning("ChkSelecionado não encontrado na linha do localizador %s", localizador)
+        self.esperar("localizador(es) selecionado(s)")
+        self.logger.info("Localizador %s — %d/%d checkbox(es) marcado(s)", localizador, marcados, total_linhas)
         self.limpar_filtros_com_calma()
-        return False, f"ChkSelecionado não encontrado na linha do localizador {localizador}"
+        return True, "OK"
 
     def _obter_valor_oficial_da_linha(self, linha: Locator) -> Decimal | None:
         """Lê a coluna 'Valor Oficial' da linha usando os headers do grid."""

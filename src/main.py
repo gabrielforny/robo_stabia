@@ -5,6 +5,7 @@ import shutil
 import sys
 from collections import defaultdict
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 
 from config import load_config
@@ -175,13 +176,20 @@ def processar_latam_vendas(
                     break  # não é falha de browser — não retentar
 
                 candidato_ok = None
+                candidato_comissao = None
+                valor_comissao = None
                 for c in candidatos:
                     if transacao.valor_excel is not None and c.total_fornecedor is not None:
                         if abs(c.total_fornecedor) == abs(transacao.valor_excel):
                             candidato_ok = c
                             break
+                        # Verifica se a diferença é de até 20% (tabela > excel)
+                        diferenca = abs(c.total_fornecedor) - abs(transacao.valor_excel)
+                        if diferenca > 0 and diferenca / abs(c.total_fornecedor) <= Decimal("0.20"):
+                            candidato_comissao = c
+                            valor_comissao = diferenca
 
-                if not candidato_ok:
+                if not candidato_ok and not candidato_comissao:
                     vals = [str(c.total_fornecedor) for c in candidatos]
                     resultado_msg = (
                         f"ERRO | Valor não bate nas Vendas | "
@@ -189,35 +197,44 @@ def processar_latam_vendas(
                     )
                     break  # não é falha de browser — não retentar
 
+                candidato_final = candidato_ok or candidato_comissao
                 logger.info(
-                    "Localizador %s → Venda=%s | TotalForn=%s",
+                    "Localizador %s → Venda=%s | TotalForn=%s%s",
                     transacao.localizador_extraido,
-                    candidato_ok.codigo_venda,
-                    candidato_ok.total_fornecedor,
+                    candidato_final.codigo_venda,
+                    candidato_final.total_fornecedor,
+                    f" | Comissão={valor_comissao}" if valor_comissao else "",
                 )
 
                 try:
-                    stur.seguir_fluxo_venda_ok(
-                        candidato_ok, codigo_autorizacao=transacao.codigo_autorizacao
-                    )
+                    if candidato_ok:
+                        stur.seguir_fluxo_venda_ok(
+                            candidato_ok, codigo_autorizacao=transacao.codigo_autorizacao
+                        )
+                    else:
+                        stur.seguir_fluxo_venda_com_comissao(
+                            candidato_comissao,
+                            valor_comissao=valor_comissao,
+                            codigo_autorizacao=transacao.codigo_autorizacao,
+                        )
                     resultado_msg = (
-                        f"OK Vendas | Venda {candidato_ok.codigo_venda} | "
+                        f"OK Vendas | Venda {candidato_final.codigo_venda} | "
                         f"Loc {transacao.localizador_extraido}"
                     )
                     foi_sucesso = True
                     ultima_exc = None
                     break
                 except VendaJaFaturadaError:
-                    logger.warning("Venda %s já faturada — marcando e seguindo.", candidato_ok.codigo_venda)
+                    logger.warning("Venda %s já faturada — marcando e seguindo.", candidato_final.codigo_venda)
                     resultado_msg = (
-                        f"JÁ FATURADO | Venda {candidato_ok.codigo_venda} | "
+                        f"JÁ FATURADO | Venda {candidato_final.codigo_venda} | "
                         f"Loc {transacao.localizador_extraido}"
                     )
                     break  # condição esperada — não retentar
                 except Exception as exc:
                     logger.warning(
                         "Erro ao processar venda %s (tentativa %d/%d): %s",
-                        candidato_ok.codigo_venda, tentativa, MAX_TENTATIVAS_POR_ITEM, exc,
+                        candidato_final.codigo_venda, tentativa, MAX_TENTATIVAS_POR_ITEM, exc,
                     )
                     ultima_exc = exc
                     continue
@@ -296,6 +313,8 @@ def processar_latam_conferencia(
             financeiro.abrir_adicionar_titulos()
             financeiro.garantir_coluna_localizador_visivel()
 
+            ok_conferencia: list[Transacao] = []
+
             for transacao in grupo:
                 if deve_parar and deve_parar():
                     logger.warning("Parada solicitada — interrompendo seleção de localizadores.")
@@ -313,6 +332,7 @@ def processar_latam_conferencia(
                 )
 
                 if encontrado:
+                    ok_conferencia.append(transacao)
                     resultado_conf = f"OK Conferência | {descricao_busca} | Loc {transacao.localizador_extraido}"
                     if transacao.venda_ja_ok:
                         # Sobrescreve limpo: remove o ERRO Conferência anterior
@@ -332,6 +352,15 @@ def processar_latam_conferencia(
                         excel_service.acrescentar_resultado(
                             df, transacao, f"ERRO Conferência | {motivo}"
                         )
+
+            soma_ok = sum(t.valor_excel for t in ok_conferencia if t.valor_excel is not None)
+            logger.info(
+                "Conferência %s — %d/%d adicionados | Soma dos valores: R$ %s",
+                descricao_busca,
+                len(ok_conferencia),
+                len(grupo),
+                soma_ok,
+            )
 
             financeiro.gravar_titulos()
             financeiro.gravar_conferencia()
@@ -368,8 +397,8 @@ def processar_arquivo_aberto(
     df, aba = excel_service.carregar_transacoes(arquivo)
     logger.info("Aba/tipo carregado: %s | Colunas: %s", aba, list(df.columns))
 
-    transacoes = excel_service.montar_transacoes(df, origem_arquivo=arquivo.name)
-    logger.info("Total de linhas a processar: %d", len(transacoes))
+    transacoes, transacoes_negativas = excel_service.montar_transacoes(df, origem_arquivo=arquivo.name)
+    logger.info("Total de linhas a processar: %d | Valores negativos (reservados): %d", len(transacoes), len(transacoes_negativas))
 
     transacoes_latam = [t for t in transacoes if t.tipo_busca in COMPANHIAS_SUPORTADAS]
     transacoes_outras = [t for t in transacoes if t.tipo_busca not in COMPANHIAS_SUPORTADAS]

@@ -509,6 +509,38 @@ class SturAutomation:
             self.preencher_pagamento_cartao_agencia(codigo_autorizacao=codigo_autorizacao)
             self.gravar_venda_e_voltar()
 
+    def seguir_fluxo_venda_com_comissao(
+        self,
+        candidato: CandidatoVenda,
+        valor_comissao: Decimal,
+        codigo_autorizacao: str = "",
+    ) -> None:
+        """Mesmo fluxo de seguir_fluxo_venda_ok, mas preenche Comissão Recebida antes de gravar.
+
+        Usado quando o valor da tabela é maior que o Excel em até 20% — a diferença entra
+        como comissão recebida para que o Total Fornecedor feche com o valor do Excel.
+        """
+        self.logger.info(
+            "Fluxo COM COMISSÃO | Venda=%s | Comissão=%s",
+            candidato.codigo_venda, valor_comissao,
+        )
+        self.abrir_edicao_venda(candidato)
+        self._preencher_comissao_recebida(valor_comissao)
+        self.editar_primeiro_pagamento_fornecedor()
+        self.preencher_pagamento_cartao_agencia(codigo_autorizacao=codigo_autorizacao)
+        self.gravar_venda_e_voltar()
+
+    def _preencher_comissao_recebida(self, valor: Decimal) -> None:
+        frame = self._frame()
+        valor_br = str(valor).replace(".", ",")
+        self.logger.info("Preenchendo Comissão Recebida: %s", valor_br)
+        campo = frame.locator("#c0_PH1_ADT_UCRc_ED")
+        campo.wait_for(state="visible", timeout=10000)
+        campo.click()
+        campo.fill(valor_br)
+        campo.dispatch_event("change")
+        self.esperar("comissão recebida preenchida")
+
     def seguir_fluxo_venda_fechada(self, candidato: CandidatoVenda, codigo_autorizacao: str = "") -> None:
         """
         Fluxo para vendas FECHADAS:
