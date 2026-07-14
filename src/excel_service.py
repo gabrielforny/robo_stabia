@@ -1,3 +1,4 @@
+import logging
 import re
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -5,6 +6,8 @@ from pathlib import Path
 import pandas as pd
 import openpyxl
 from openpyxl.styles import PatternFill
+
+_log = logging.getLogger("robo_stur")
 
 from config import AppConfig
 from models import Transacao
@@ -179,20 +182,20 @@ class ExcelService:
             f"  Linha {t.linha_excel:>3} | {t.valor_excel} | {t.estabelecimento}"
             for t in transacoes_negativas
         ]
-        logger.info(
+        _log.info(
             "Aéreas para processar (%d):\n%s",
             len(aereas),
             "\n".join(linhas_aereas) if linhas_aereas else "  (nenhuma)",
         )
         if linhas_ignoradas:
-            logger.info(
+            _log.info(
                 "Ignoradas — não são aéreas (%d):\n%s",
                 len(ignoradas),
                 "\n".join(linhas_ignoradas),
             )
         if linhas_negativas:
             soma_neg = sum(t.valor_excel for t in transacoes_negativas if t.valor_excel is not None)
-            logger.info(
+            _log.info(
                 "Valor negativo — reservadas para fluxo futuro (%d | soma: %s):\n%s",
                 len(transacoes_negativas),
                 soma_neg,
