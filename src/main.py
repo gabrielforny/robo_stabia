@@ -328,6 +328,8 @@ def processar_latam_conferencia(
 
         logger.info("Processando conferência LATAM: %s | %d item(ns)", descricao_busca, len(grupo))
 
+        processados: set[int] = set()
+
         try:
             financeiro.buscar_ou_criar_conferencia_latam(
                 descricao_busca=descricao_busca,
@@ -349,12 +351,52 @@ def processar_latam_conferencia(
                     excel_service.acrescentar_resultado(
                         df, transacao, "ERRO Conferência | sem localizador"
                     )
+                    processados.add(transacao.indice_planilha)
                     continue
 
-                encontrado, motivo = financeiro.buscar_e_selecionar_localizador(
-                    localizador=transacao.localizador_extraido,
-                    valor_excel=transacao.valor_excel,
-                )
+                # Um item travado (ex.: timeout por lentidão do STUR) não pode
+                # derrubar os outros 155 já processados: tenta de novo uma vez
+                # e, se persistir, marca só este item como erro e segue em
+                # frente — o que já foi selecionado continua indo para
+                # gravar_titulos()/gravar_conferencia() no final.
+                encontrado = False
+                motivo = ""
+                for tentativa in (1, 2):
+                    try:
+                        encontrado, motivo = financeiro.buscar_e_selecionar_localizador(
+                            localizador=transacao.localizador_extraido,
+                            valor_excel=transacao.valor_excel,
+                        )
+                        break
+                    except ProcessamentoCancelado:
+                        raise
+                    except Exception as exc_item:
+                        if tentativa == 2:
+                            logger.warning(
+                                "Falha ao processar localizador %s na conferência %s "
+                                "após retentativa: %s. Pulando este item e seguindo com os demais.",
+                                transacao.localizador_extraido, descricao_busca, exc_item,
+                            )
+                            excel_service.acrescentar_resultado(
+                                df, transacao,
+                                f"ERRO Conferência | falha ao processar item: "
+                                f"{type(exc_item).__name__}: {exc_item}",
+                            )
+                            processados.add(transacao.indice_planilha)
+                        else:
+                            logger.warning(
+                                "Falha ao processar localizador %s (tentativa %d/2): %s. Tentando de novo.",
+                                transacao.localizador_extraido, tentativa, exc_item,
+                            )
+                            try:
+                                financeiro.limpar_filtros_com_calma()
+                            except Exception:
+                                logger.warning("Não foi possível limpar filtros antes de retentar item.")
+
+                if transacao.indice_planilha in processados:
+                    continue
+
+                processados.add(transacao.indice_planilha)
 
                 if encontrado:
                     ok_conferencia.append(transacao)
@@ -395,6 +437,8 @@ def processar_latam_conferencia(
         except Exception as exc:
             logger.exception("Erro no processamento da conferência LATAM %s", descricao_busca)
             for transacao in grupo:
+                if transacao.indice_planilha in processados:
+                    continue
                 excel_service.acrescentar_resultado(
                     df, transacao,
                     f"ERRO Conferência inesperado | {type(exc).__name__}: {exc}",
