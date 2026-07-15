@@ -349,7 +349,40 @@ class SturFinanceiroAutomation:
             self.logger.info("Conferência '%s' não encontrada. Criando nova.", descricao_busca)
             self._criar_nova_conferencia(descricao_criar, data_fatura)
 
+            # Tenta gravar o cabeçalho imediatamente, antes de adicionar títulos:
+            # se a adição de localizadores travar/der timeout no meio do caminho
+            # (já aconteceu por lentidão do STUR), a conferência já existe salva
+            # no banco em vez de sumir junto com o formulário não gravado.
+            # Se essa gravação antecipada falhar por qualquer motivo, não é
+            # motivo para quebrar o robô: segue o fluxo antigo (formulário
+            # preenchido segue em tela e só é gravado ao final, como antes).
+            try:
+                self._gravar_cabecalho_novo()
+
+                self.limpar_filtros_com_calma()
+                self.clicar_coluna("Descrição")
+                self.preencher_search(descricao_busca)
+                resultados_pos_criacao = self.coletar_resultados_da_tabela()
+                if not resultados_pos_criacao:
+                    raise RuntimeError(
+                        f"Conferência '{descricao_busca}' não encontrada após gravar o cabeçalho."
+                    )
+                self.clicar_editar_linha(resultados_pos_criacao[0]["__linha_locator"])
+            except Exception:
+                self.logger.warning(
+                    "Não foi possível gravar/reabrir antecipadamente o cabeçalho da "
+                    "conferência '%s'. Seguindo fluxo padrão: gravação só ao final.",
+                    descricao_busca,
+                )
+
         self.esperar("conferência aberta")
+
+    def _gravar_cabecalho_novo(self) -> None:
+        """Grava o cabeçalho da conferência recém-criada antes de adicionar
+        títulos, para que ela já fique persistida no STUR mesmo que a etapa de
+        adicionar localizadores falhe no meio do caminho."""
+        self.logger.info("Gravando cabeçalho da nova conferência (antes de adicionar títulos)")
+        self.gravar_conferencia()
 
     def _criar_nova_conferencia(self, descricao: str, data_fatura: str) -> None:
         frame = self._frame()

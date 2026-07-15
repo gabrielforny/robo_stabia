@@ -3,6 +3,7 @@ import argparse
 import os
 import shutil
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
@@ -47,6 +48,30 @@ def _pasta_documentos() -> Path:
 
 PASTA_AUTOMACAO_STUR = _pasta_documentos() / "automacao-stur"
 PASTA_FINALIZADAS = PASTA_AUTOMACAO_STUR / "finalizadas"
+
+
+def _apagar_com_retry(arquivo: Path, logger, tentativas: int = 5, espera_segundos: float = 2.0) -> bool:
+    """Tenta apagar o arquivo algumas vezes antes de desistir.
+
+    OneDrive costuma travar o arquivo por 1-3s durante sincronização logo
+    após ele ser lido/escrito; sem retry isso derrubava o processamento
+    inteiro mesmo com o .xlsx final já salvo com sucesso.
+    """
+    for tentativa in range(1, tentativas + 1):
+        try:
+            arquivo.unlink()
+            return True
+        except PermissionError:
+            if tentativa == tentativas:
+                logger.warning(
+                    "Não foi possível apagar %s após %d tentativas (arquivo em uso por outro "
+                    "processo, provavelmente OneDrive ou Excel). Ele permanecerá na pasta e "
+                    "será reprocessado na próxima execução.",
+                    arquivo, tentativas,
+                )
+                return False
+            time.sleep(espera_segundos)
+    return False
 
 
 def mover_para_finalizadas(arquivo_saida: Path) -> Path:
@@ -467,7 +492,7 @@ def processar_arquivo_aberto(
     # deixa o .csv original intacto — sem isso ele ficaria na pasta e seria
     # reprocessado na próxima execução.
     if arquivo != arquivo_saida and arquivo.exists():
-        arquivo.unlink()
+        _apagar_com_retry(arquivo, logger)
 
     arquivo_saida = mover_para_finalizadas(arquivo_saida)
     logger.info("Arquivo movido para finalizadas: %s", arquivo_saida)
