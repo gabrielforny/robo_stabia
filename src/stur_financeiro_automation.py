@@ -450,6 +450,37 @@ class SturFinanceiroAutomation:
         img_eye.click()
         self.esperar("painel colunas fechado")
 
+    def _aguardar_grid_localizador(self, localizador: str, timeout_segundos: float = 15.0) -> bool:
+        """
+        Aguarda a grid de títulos realmente refletir o localizador buscado, em vez de
+        confiar apenas na visibilidade do elemento (que só garante que o grid *existe*
+        na tela, não que o conteúdo pós-AJAX já chegou). Em conferências com grid grande
+        (ex.: filtro de data muito amplo), o refresh pode demorar mais que a espera fixa
+        e o robô acaba lendo a linha do localizador buscado anteriormente por engano.
+
+        Retorna True assim que encontra alguma linha cujo texto contém o localizador
+        buscado, ou False se o tempo esgotou sem nenhuma linha bater (nesse caso o
+        localizador realmente não está nos títulos disponíveis).
+        """
+        frame = self._frame()
+        grid = frame.locator(self.GRID)
+        localizador_normalizado = localizador.strip().upper()
+        intervalo = 0.4
+        tentativas = max(1, int(timeout_segundos / intervalo))
+
+        for _ in range(tentativas):
+            linhas = grid.locator("tr:has([id*='ChkSelecionado'])")
+            total = linhas.count()
+
+            for i in range(total):
+                texto_linha = self._normalizar_texto(linhas.nth(i).inner_text()).upper()
+                if localizador_normalizado in texto_linha:
+                    return True
+
+            time.sleep(intervalo)
+
+        return False
+
     def buscar_e_selecionar_localizador(
         self,
         localizador: str,
@@ -469,6 +500,14 @@ class SturFinanceiroAutomation:
         frame = self._frame()
         grid = frame.locator(self.GRID)
         grid.wait_for(state="visible", timeout=15000)
+
+        grid_confirmada = self._aguardar_grid_localizador(localizador, timeout_segundos=15.0)
+        if not grid_confirmada:
+            self.logger.warning(
+                "Grid de títulos não confirmou atualização para o localizador %s dentro "
+                "do tempo esperado; prosseguindo (pode ser 'não encontrado' legítimo).",
+                localizador,
+            )
 
         # Debug: loga headers e total de linhas visíveis antes de filtrar por ChkSelecionado
         headers_debug = self._obter_headers_grid()

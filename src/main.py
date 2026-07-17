@@ -460,6 +460,7 @@ def processar_arquivo_aberto(
     headless: bool,
     logger,
     deve_parar=None,
+    somente_conferencia: bool = False,
 ) -> ResultadoProcessamento:
     logger.info("Iniciando processamento do arquivo: %s", arquivo)
 
@@ -482,23 +483,29 @@ def processar_arquivo_aberto(
 
     if transacoes_latam:
         try:
-            # Fase 1: Vendas — gerencia o próprio browser com retry por item
-            logger.info("=== FASE 1: Vendas ===")
-            sucesso_v, erro_v = processar_latam_vendas(
-                config=config,
-                headless=headless,
-                excel_service=excel_service,
-                df=df,
-                transacoes_latam=transacoes_latam,
-                logger=logger,
-                deve_parar=deve_parar,
-            )
-            total_sucesso += sucesso_v
-            total_erro += erro_v
+            if not somente_conferencia:
+                # Fase 1: Vendas — gerencia o próprio browser com retry por item
+                logger.info("=== FASE 1: Vendas ===")
+                sucesso_v, erro_v = processar_latam_vendas(
+                    config=config,
+                    headless=headless,
+                    excel_service=excel_service,
+                    df=df,
+                    transacoes_latam=transacoes_latam,
+                    logger=logger,
+                    deve_parar=deve_parar,
+                )
+                total_sucesso += sucesso_v
+                total_erro += erro_v
 
-            arquivo_parcial = excel_service.salvar_saida(df, arquivo)
-            logger.info("Backup parcial (pós Vendas) salvo em: %s", arquivo_parcial)
-            excel_service.salvar_no_local_com_cores(df, arquivo)
+                arquivo_parcial = excel_service.salvar_saida(df, arquivo)
+                logger.info("Backup parcial (pós Vendas) salvo em: %s", arquivo_parcial)
+                excel_service.salvar_no_local_com_cores(df, arquivo)
+            else:
+                logger.info(
+                    "=== FASE 1: Vendas — PULADA (modo 'Só Conferência'; "
+                    "assume que a venda já foi ajustada manualmente) ==="
+                )
 
             # Fase 2: Conferências — nova sessão de browser
             logger.info("=== FASE 2: Conferências ===")
@@ -558,6 +565,7 @@ def processar_arquivos(
     headless: bool,
     logger=None,
     deve_parar=None,
+    somente_conferencia: bool = False,
 ) -> list[ResultadoProcessamento]:
     config = load_config()
     if logger is None:
@@ -583,7 +591,10 @@ def processar_arquivos(
     if not arquivos:
         raise FileNotFoundError("Nenhum arquivo Excel/CSV válido encontrado para processamento.")
 
-    logger.info("Iniciando processamento — fluxo LATAM: Vendas + Conferências")
+    if somente_conferencia:
+        logger.info("Iniciando processamento — fluxo LATAM: SOMENTE Conferências (Fase 1 pulada)")
+    else:
+        logger.info("Iniciando processamento — fluxo LATAM: Vendas + Conferências")
     logger.info("Arquivos recebidos: %s", [str(a) for a in arquivos])
 
     resultados: list[ResultadoProcessamento] = []
@@ -601,6 +612,7 @@ def processar_arquivos(
                 headless=headless,
                 logger=logger,
                 deve_parar=deve_parar,
+                somente_conferencia=somente_conferencia,
             )
         except ProcessamentoCancelado as exc:
             exc.resultados_parciais = resultados
