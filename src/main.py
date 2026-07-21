@@ -759,14 +759,27 @@ def processar_arquivo_aberto(
     logger,
     deve_parar=None,
     somente_conferencia: bool = False,
+    somente_tipo: str | None = None,
 ) -> ResultadoProcessamento:
+    """`somente_tipo`: quando "latam" ou "hoteis", restringe este arquivo a um único
+    fluxo — usado quando o usuário escolheu planilhas diferentes para aéreo e
+    hotelaria na GUI. `None` mantém o padrão de ler os dois fluxos do mesmo arquivo.
+    """
     logger.info("Iniciando processamento do arquivo: %s", arquivo)
 
     df, aba = excel_service.carregar_transacoes(arquivo)
     logger.info("Aba/tipo carregado: %s | Colunas: %s", aba, list(df.columns))
 
-    transacoes, transacoes_negativas = excel_service.montar_transacoes(df, origem_arquivo=arquivo.name)
-    transacoes_hotel = excel_service.montar_transacoes_hoteis(df, origem_arquivo=arquivo.name)
+    if somente_tipo == "hoteis":
+        transacoes, transacoes_negativas = [], []
+    else:
+        transacoes, transacoes_negativas = excel_service.montar_transacoes(df, origem_arquivo=arquivo.name)
+
+    if somente_tipo == "latam":
+        transacoes_hotel = []
+    else:
+        transacoes_hotel = excel_service.montar_transacoes_hoteis(df, origem_arquivo=arquivo.name)
+
     logger.info("Total de linhas LATAM/GOL/AZUL: %d | Valores negativos (reservados): %d", len(transacoes), len(transacoes_negativas))
     logger.info("Total de linhas Hotelaria: %d", len(transacoes_hotel))
 
@@ -895,6 +908,7 @@ def processar_arquivos(
     logger=None,
     deve_parar=None,
     somente_conferencia: bool = False,
+    tipos_por_arquivo: dict[Path, str] | None = None,
 ) -> list[ResultadoProcessamento]:
     config = load_config()
     if logger is None:
@@ -942,6 +956,7 @@ def processar_arquivos(
                 logger=logger,
                 deve_parar=deve_parar,
                 somente_conferencia=somente_conferencia,
+                somente_tipo=(tipos_por_arquivo or {}).get(arquivo),
             )
         except ProcessamentoCancelado as exc:
             exc.resultados_parciais = resultados
@@ -966,22 +981,38 @@ def listar_arquivos_da_pasta(pasta: Path) -> list[Path]:
 
 
 def resolver_arquivos(args) -> list[Path]:
+    arquivos, _tipos = resolver_arquivos_e_tipos(args)
+    return arquivos
+
+
+def resolver_arquivos_e_tipos(args) -> tuple[list[Path], dict[Path, str]]:
+    """Retorna (arquivos, tipos_por_arquivo).
+
+    `tipos_por_arquivo` mapeia arquivo -> "latam" ou "hoteis" apenas quando o usuário
+    escolheu, via GUI, duas planilhas DIFERENTES para aéreo e hotelaria — nesse caso
+    cada arquivo processa somente o fluxo correspondente, mesmo que por coincidência
+    tenha linhas que pareçam do outro tipo. Quando as duas seleções apontam para a
+    mesma planilha (ou só uma foi escolhida), mantém o comportamento padrão: o mesmo
+    arquivo é lido para os dois fluxos, sem restrição (dict vazio).
+    """
     if args.arquivo:
-        return [Path(caminho) for caminho in args.arquivo]
+        return [Path(caminho) for caminho in args.arquivo], {}
 
     if args.pasta:
-        return listar_arquivos_da_pasta(Path(args.pasta))
+        return listar_arquivos_da_pasta(Path(args.pasta)), {}
 
-    # Arquivos escolhidos explicitamente pelos pickers da GUI (deduplicados por caminho)
-    arquivos_gui: list[Path] = []
-    for attr in ("arquivo_latam", "arquivo_hoteis"):
-        caminho = getattr(args, attr, None)
-        if caminho:
-            p = Path(caminho)
-            if p not in arquivos_gui:
-                arquivos_gui.append(p)
-    if arquivos_gui:
-        return arquivos_gui
+    arquivo_latam = getattr(args, "arquivo_latam", None)
+    arquivo_hoteis = getattr(args, "arquivo_hoteis", None)
+
+    if arquivo_latam or arquivo_hoteis:
+        if arquivo_latam and arquivo_hoteis and Path(arquivo_latam) != Path(arquivo_hoteis):
+            p_latam = Path(arquivo_latam)
+            p_hoteis = Path(arquivo_hoteis)
+            return [p_latam, p_hoteis], {p_latam: "latam", p_hoteis: "hoteis"}
+
+        # Mesma planilha (ou só uma das duas foi escolhida) — sem restrição de tipo
+        caminho = arquivo_latam or arquivo_hoteis
+        return [Path(caminho)], {}
 
     # Padrão: pasta ~/Documents/automacao-stur — pega só o arquivo mais recente.
     # Sem fallback para Downloads/projeto: se a pasta não existir ou estiver vazia,
@@ -989,9 +1020,9 @@ def resolver_arquivos(args) -> list[Path]:
     PASTA_AUTOMACAO_STUR.mkdir(parents=True, exist_ok=True)
     arquivos = listar_arquivos_da_pasta(PASTA_AUTOMACAO_STUR)
     if arquivos:
-        return [arquivos[-1]]
+        return [arquivos[-1]], {}
 
-    return []
+    return [], {}
 
 
 def main() -> None:

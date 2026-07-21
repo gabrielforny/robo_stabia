@@ -133,6 +133,15 @@ class App(tk.Tk):
             self._limpar_arquivo_hoteis,
         )
 
+        tk.Label(
+            files_frame,
+            text=(
+                "Planilhas diferentes: cada uma processa só o seu fluxo. "
+                "Mesma planilha (ou só uma escolhida): lê os dois fluxos dela."
+            ),
+            font=("Helvetica", 9), fg="#777", bg="#f5f5f5", anchor="w",
+        ).pack(fill=tk.X, pady=(2, 0))
+
         # ── área de log ───────────────────────────────────────────────
         self.txt_log = scrolledtext.ScrolledText(
             self,
@@ -207,7 +216,7 @@ class App(tk.Tk):
             self._garantir_playwright()
 
             from config import load_config, _base_dir_padrao
-            from main import PASTA_AUTOMACAO_STUR, processar_arquivos, resolver_arquivos
+            from main import PASTA_AUTOMACAO_STUR, processar_arquivos, resolver_arquivos_e_tipos
             from models import ProcessamentoCancelado
 
             env_esperado = _base_dir_padrao() / ".env"
@@ -233,17 +242,25 @@ class App(tk.Tk):
                 arquivo_latam=self._arquivo_latam,
                 arquivo_hoteis=self._arquivo_hoteis,
             )
-            arquivos = resolver_arquivos(args)
+            arquivos, tipos_por_arquivo = resolver_arquivos_e_tipos(args)
 
             if not arquivos:
                 self._log(f"ERRO: Nenhum arquivo encontrado em {PASTA_AUTOMACAO_STUR}", "ERROR")
                 self.after(0, self._finalizar_erro, "Nenhum arquivo encontrado.")
                 return
 
+            if tipos_por_arquivo:
+                self._log(
+                    "Planilhas diferentes selecionadas — cada uma restrita ao seu fluxo "
+                    "(aéreo x hotelaria).",
+                    "INFO",
+                )
+
             resultados = processar_arquivos(
                 arquivos, headless=False, logger=logger,
                 deve_parar=self._stop_event.is_set,
                 somente_conferencia=somente_conferencia,
+                tipos_por_arquivo=tipos_por_arquivo,
             )
             self.after(0, self._finalizar_ok, resultados)
 
