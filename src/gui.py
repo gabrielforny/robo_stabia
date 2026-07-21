@@ -63,6 +63,22 @@ class App(tk.Tk):
         )
         self.btn_iniciar.pack(side=tk.LEFT)
 
+        self.btn_conferencia = tk.Button(
+            top,
+            text="🗂   Só Conferência",
+            font=("Helvetica", 13, "bold"),
+            bg="#2e7d32",
+            fg="white",
+            activebackground="#1b5e20",
+            activeforeground="white",
+            padx=20,
+            pady=10,
+            relief=tk.FLAT,
+            cursor="hand2",
+            command=lambda: self._iniciar(somente_conferencia=True),
+        )
+        self.btn_conferencia.pack(side=tk.LEFT, padx=(10, 0))
+
         self.btn_parar = tk.Button(
             top,
             text="■   Parar",
@@ -152,14 +168,18 @@ class App(tk.Tk):
     # Processamento
     # ------------------------------------------------------------------
 
-    def _iniciar(self):
+    def _iniciar(self, somente_conferencia: bool = False):
         self.btn_iniciar.config(state=tk.DISABLED)
+        self.btn_conferencia.config(state=tk.DISABLED)
         self.btn_parar.config(state=tk.NORMAL, text="■   Parar")
-        self.lbl_status.config(text="Processando…", fg="#1565c0")
+        if somente_conferencia:
+            self.lbl_status.config(text="Processando (só conferência)…", fg="#2e7d32")
+        else:
+            self.lbl_status.config(text="Processando…", fg="#1565c0")
         self.frame_resumo.pack_forget()
         self._limpar_log()
         self._stop_event.clear()
-        threading.Thread(target=self._run, daemon=True).start()
+        threading.Thread(target=self._run, args=(somente_conferencia,), daemon=True).start()
 
     def _parar(self):
         self.btn_parar.config(state=tk.DISABLED, text="Parando…")
@@ -167,7 +187,7 @@ class App(tk.Tk):
         self._log("Solicitação de parada recebida — encerrando no próximo ponto seguro (pode levar alguns segundos)…", "WARNING")
         self._stop_event.set()
 
-    def _run(self):
+    def _run(self, somente_conferencia: bool = False):
         try:
             # Quando rodando como .exe empacotado, o Playwright extrai seus arquivos numa
             # pasta temporária mas precisa encontrar o Chromium onde foi instalado de fato.
@@ -223,6 +243,7 @@ class App(tk.Tk):
             resultados = processar_arquivos(
                 arquivos, headless=False, logger=logger,
                 deve_parar=self._stop_event.is_set,
+                somente_conferencia=somente_conferencia,
             )
             self.after(0, self._finalizar_ok, resultados)
 
@@ -312,6 +333,7 @@ class App(tk.Tk):
 
     def _finalizar_ok(self, resultados):
         self.btn_iniciar.config(state=tk.NORMAL)
+        self.btn_conferencia.config(state=tk.NORMAL)
         self.btn_parar.config(state=tk.DISABLED, text="■   Parar")
         self.lbl_status.config(text="Concluído com sucesso!", fg="#2e7d32")
 
@@ -331,6 +353,7 @@ class App(tk.Tk):
 
     def _finalizar_erro(self, msg: str):
         self.btn_iniciar.config(state=tk.NORMAL)
+        self.btn_conferencia.config(state=tk.NORMAL)
         self.btn_parar.config(state=tk.DISABLED, text="■   Parar")
         self.lbl_status.config(text=f"Erro: {msg}", fg="#c62828")
         self.lbl_resumo.config(
@@ -342,6 +365,7 @@ class App(tk.Tk):
 
     def _finalizar_cancelado(self, resultados_parciais):
         self.btn_iniciar.config(state=tk.NORMAL)
+        self.btn_conferencia.config(state=tk.NORMAL)
         self.btn_parar.config(state=tk.DISABLED, text="■   Parar")
         self.lbl_status.config(text="Interrompido pelo usuário.", fg="#e65100")
 

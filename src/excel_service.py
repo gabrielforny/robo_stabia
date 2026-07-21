@@ -1,3 +1,4 @@
+import logging
 import re
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -5,6 +6,8 @@ from pathlib import Path
 import pandas as pd
 import openpyxl
 from openpyxl.styles import PatternFill
+
+_log = logging.getLogger("robo_stur")
 
 from config import AppConfig
 from models import Transacao, TransacaoHotel
@@ -72,7 +75,13 @@ class ExcelService:
 
         raise ValueError(f"Formato não suportado: {extensao}")
 
-    def montar_transacoes(self, df: pd.DataFrame, origem_arquivo: str | None = None) -> list[Transacao]:
+    def montar_transacoes(
+        self, df: pd.DataFrame, origem_arquivo: str | None = None
+    ) -> tuple[list[Transacao], list[Transacao]]:
+        """Retorna (transacoes_positivas, transacoes_negativas).
+
+        Negativas são separadas para uso futuro em outro fluxo — não entram no processamento atual.
+        """
         tipo_layout = self._identificar_layout(df)
 
         coluna_estabelecimento = self._resolver_coluna_estabelecimento(df, tipo_layout=tipo_layout)
@@ -83,6 +92,7 @@ class ExcelService:
         coluna_autorizacao = self._resolver_coluna_autorizacao(df)
 
         transacoes: list[Transacao] = []
+        transacoes_negativas: list[Transacao] = []
 
         coluna_obs = self._resolver_coluna_observacao(df)
         coluna_res = self.config.coluna_resultado
@@ -121,6 +131,7 @@ class ExcelService:
             data_excel = str(row.get(coluna_data, "") or "").strip() if coluna_data else ""
             data_stur = converter_data_excel_para_stur(data_excel)
             valor_excel = self._parse_decimal(row.get(coluna_valor)) if coluna_valor else None
+
             vcn = str(row.get(coluna_vcn, "") or "").strip() if coluna_vcn else ""
             extrato_conta = str(row.get(coluna_extrato, "") or "").strip() if coluna_extrato else ""
             data_fatura = self._converter_extrato_para_data_fatura(extrato_conta)
@@ -140,31 +151,64 @@ class ExcelService:
             if codigo_autorizacao.lower() == "nan":
                 codigo_autorizacao = ""
 
-            transacoes.append(
-                Transacao(
-                    indice_planilha=index,
-                    linha_excel=index + 2,
-                    estabelecimento=estabelecimento,
-                    data_aprovacao=data_excel,
-                    data_stur=data_stur,
-                    valor_excel=valor_excel,
-                    vcn=vcn,
-                    codigo_venda_vcn=codigo_venda_vcn,
-                    localizador_extraido=localizador_extraido,
-                    termo_busca=termo_busca,
-                    coluna_busca=coluna_busca,
-                    tipo_busca=tipo_busca,
-                    origem_arquivo=origem_arquivo or "",
-                    tipo_layout=tipo_layout,
-                    extrato_conta=extrato_conta,
-                    data_fatura=data_fatura,
-                    codigo_autorizacao=codigo_autorizacao,
-                    venda_ja_ok=venda_ja_ok,
-                    resultado_venda_anterior=resultado_venda_anterior,
-                )
+            t = Transacao(
+                indice_planilha=index,
+                linha_excel=index + 2,
+                estabelecimento=estabelecimento,
+                data_aprovacao=data_excel,
+                data_stur=data_stur,
+                valor_excel=valor_excel,
+                vcn=vcn,
+                codigo_venda_vcn=codigo_venda_vcn,
+                localizador_extraido=localizador_extraido,
+                termo_busca=termo_busca,
+                coluna_busca=coluna_busca,
+                tipo_busca=tipo_busca,
+                origem_arquivo=origem_arquivo or "",
+                tipo_layout=tipo_layout,
+                extrato_conta=extrato_conta,
+                data_fatura=data_fatura,
+                codigo_autorizacao=codigo_autorizacao,
+                venda_ja_ok=venda_ja_ok,
+                resultado_venda_anterior=resultado_venda_anterior,
             )
+            if valor_excel is not None and valor_excel < 0:
+                transacoes_negativas.append(t)
+            else:
+                transacoes.append(t)
 
-        return transacoes
+        _aereas = {"LATAM", "GOL", "AZUL", "VCN"}
+        aereas = [t for t in transacoes if t.tipo_busca in _aereas]
+        ignoradas = [t for t in transacoes if t.tipo_busca not in _aereas]
+        linhas_aereas = [
+            f"  Linha {t.linha_excel:>3} | {'[SÓ CONF]' if t.venda_ja_ok else '[COMPLETO]'} | {t.estabelecimento}"
+            for t in aereas
+        ]
+        linhas_ignoradas = [f"  Linha {t.linha_excel:>3} | {t.estabelecimento}" for t in ignoradas]
+        linhas_negativas = [
+            f"  Linha {t.linha_excel:>3} | {t.valor_excel} | {t.estabelecimento}"
+            for t in transacoes_negativas
+        ]
+        _log.info(
+            "Aéreas para processar (%d):\n%s",
+            len(aereas),
+            "\n".join(linhas_aereas) if linhas_aereas else "  (nenhuma)",
+        )
+        if linhas_ignoradas:
+            _log.info(
+                "Ignoradas — não são aéreas (%d):\n%s",
+                len(ignoradas),
+                "\n".join(linhas_ignoradas),
+            )
+        if linhas_negativas:
+            soma_neg = sum(t.valor_excel for t in transacoes_negativas if t.valor_excel is not None)
+            _log.info(
+                "Valor negativo — reservadas para fluxo futuro (%d | soma: %s):\n%s",
+                len(transacoes_negativas),
+                soma_neg,
+                "\n".join(linhas_negativas),
+            )
+        return transacoes, transacoes_negativas
 
     def escrever_resultado(self, df: pd.DataFrame, transacao: Transacao, resultado: str) -> None:
         coluna = self.config.coluna_resultado
@@ -220,12 +264,15 @@ class ExcelService:
 
         for row_idx in range(2, ws.max_row + 1):
             resultado = str(ws.cell(row=row_idx, column=col_idx).value or "").strip().upper()
-            if "ERRO" in resultado:
-                fill = _RED_FILL
-            elif resultado.startswith("OK"):
+            if "OK CONFERÊNCIA" in resultado:
+                # conferência concluída → sempre verde, mesmo que haja ERRO na venda
                 fill = _GREEN_FILL
             elif "FATURADO" in resultado:
                 fill = _ORANGE_FILL
+            elif "ERRO" in resultado:
+                fill = _RED_FILL
+            elif resultado.startswith("OK"):
+                fill = _GREEN_FILL
             else:
                 continue
 

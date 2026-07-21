@@ -5,6 +5,7 @@ import re
 import time
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+from itertools import combinations
 from typing import Optional
 
 from playwright.sync_api import FrameLocator, Locator, Page
@@ -450,6 +451,37 @@ class SturFinanceiroAutomation:
         img_eye.click()
         self.esperar("painel colunas fechado")
 
+    def _aguardar_grid_localizador(self, localizador: str, timeout_segundos: float = 15.0) -> bool:
+        """
+        Aguarda a grid de títulos realmente refletir o localizador buscado, em vez de
+        confiar apenas na visibilidade do elemento (que só garante que o grid *existe*
+        na tela, não que o conteúdo pós-AJAX já chegou). Em conferências com grid grande
+        (ex.: filtro de data muito amplo), o refresh pode demorar mais que a espera fixa
+        e o robô acaba lendo a linha do localizador buscado anteriormente por engano.
+
+        Retorna True assim que encontra alguma linha cujo texto contém o localizador
+        buscado, ou False se o tempo esgotou sem nenhuma linha bater (nesse caso o
+        localizador realmente não está nos títulos disponíveis).
+        """
+        frame = self._frame()
+        grid = frame.locator(self.GRID)
+        localizador_normalizado = localizador.strip().upper()
+        intervalo = 0.4
+        tentativas = max(1, int(timeout_segundos / intervalo))
+
+        for _ in range(tentativas):
+            linhas = grid.locator("tr:has([id*='ChkSelecionado'])")
+            total = linhas.count()
+
+            for i in range(total):
+                texto_linha = self._normalizar_texto(linhas.nth(i).inner_text()).upper()
+                if localizador_normalizado in texto_linha:
+                    return True
+
+            time.sleep(intervalo)
+
+        return False
+
     def buscar_e_selecionar_localizador(
         self,
         localizador: str,
@@ -470,6 +502,14 @@ class SturFinanceiroAutomation:
         grid = frame.locator(self.GRID)
         grid.wait_for(state="visible", timeout=15000)
 
+        grid_confirmada = self._aguardar_grid_localizador(localizador, timeout_segundos=15.0)
+        if not grid_confirmada:
+            self.logger.warning(
+                "Grid de títulos não confirmou atualização para o localizador %s dentro "
+                "do tempo esperado; prosseguindo (pode ser 'não encontrado' legítimo).",
+                localizador,
+            )
+
         # Debug: loga headers e total de linhas visíveis antes de filtrar por ChkSelecionado
         headers_debug = self._obter_headers_grid()
         self.logger.info("[DEBUG] Headers da grid de títulos: %s", headers_debug)
@@ -486,38 +526,97 @@ class SturFinanceiroAutomation:
             self.limpar_filtros_com_calma()
             return False, f"localizador {localizador} não encontrado nos títulos disponíveis"
 
-        linha = linhas.first
+        total_linhas = linhas.count()
+        self.logger.info("Localizador %s — %d linha(s) encontrada(s) na grid", localizador, total_linhas)
 
-        # Valida Valor Oficial antes de marcar
+        # Índices das linhas a marcar. Por padrão, todas — mas quando o localizador
+        # aparece mais de uma vez na grid (ex.: reservas distintas reaproveitando o
+        # mesmo código de localizador), somar todas as linhas contra o valor de uma
+        # única transação do Excel dá falso negativo. Nesse caso, buscamos o
+        # subconjunto de linhas cuja soma bate com o Excel e marcamos só essas.
+        indices_para_marcar = list(range(total_linhas))
+
         if valor_excel is not None:
-            valor_tabela = self._obter_valor_oficial_da_linha(linha)
-            if valor_tabela is not None:
-                if abs(valor_tabela) != abs(valor_excel):
+            valores_linhas: list[Decimal | None] = [
+                self._obter_valor_oficial_da_linha(linhas.nth(i)) for i in range(total_linhas)
+            ]
+
+            if any(v is None for v in valores_linhas):
+                self.logger.warning(
+                    "Não foi possível ler Valor Oficial de alguma linha do localizador %s; pulando validação",
+                    localizador,
+                )
+            else:
+                soma_tabela = sum(abs(v) for v in valores_linhas)
+                alvo = abs(valor_excel)
+
+                if total_linhas > 1 and soma_tabela != alvo:
+                    subconjunto = self._encontrar_subconjunto_com_soma(valores_linhas, alvo)
+                    if subconjunto is not None:
+                        indices_para_marcar = subconjunto
+                        soma_tabela = sum(abs(valores_linhas[i]) for i in subconjunto)
+                        self.logger.info(
+                            "Localizador %s tem %d linhas na grid; usando subconjunto %s "
+                            "(soma=%s) que bate com o Excel — as demais pertencem a "
+                            "outro lançamento com o mesmo localizador.",
+                            localizador, total_linhas, subconjunto, soma_tabela,
+                        )
+
+                if soma_tabela != alvo:
                     self.logger.warning(
-                        "Valor não bate | localizador=%s | tabela=%s | excel=%s",
-                        localizador, valor_tabela, valor_excel,
+                        "Valor não bate | localizador=%s | soma tabela=%s | excel=%s",
+                        localizador, soma_tabela, valor_excel,
                     )
                     self.limpar_filtros_com_calma()
                     return False, (
-                        f"valor não bate | Valor Oficial={valor_tabela} | Excel={valor_excel}"
+                        f"valor não bate | Valor Oficial={[str(v) for v in valores_linhas]} | Excel={valor_excel}"
                     )
                 self.logger.info(
-                    "Valor conferido | localizador=%s | %s = %s", localizador, valor_tabela, valor_excel
+                    "Valor conferido | localizador=%s | soma=%s = %s", localizador, soma_tabela, valor_excel
                 )
+
+        # Marca o checkbox só das linhas selecionadas (todas, ou o subconjunto que bateu)
+        marcados = 0
+        for i in indices_para_marcar:
+            chk = linhas.nth(i).locator("[id*='ChkSelecionado']")
+            if chk.count() > 0:
+                chk.first.check(force=True)
+                marcados += 1
             else:
-                self.logger.warning("Não foi possível ler Valor Oficial da linha; prosseguindo sem validação")
+                self.logger.warning("ChkSelecionado não encontrado na linha %d do localizador %s", i, localizador)
 
-        chk = linha.locator("[id*='ChkSelecionado']")
-        if chk.count() > 0:
-            chk.first.check(force=True)
-            self.esperar("localizador selecionado")
-            self.logger.info("Localizador %s marcado com sucesso", localizador)
+        if marcados == 0:
             self.limpar_filtros_com_calma()
-            return True, "OK"
+            return False, f"ChkSelecionado não encontrado em nenhuma linha do localizador {localizador}"
 
-        self.logger.warning("ChkSelecionado não encontrado na linha do localizador %s", localizador)
+        self.esperar("localizador(es) selecionado(s)")
+        self.logger.info(
+            "Localizador %s — %d/%d checkbox(es) marcado(s)", localizador, marcados, len(indices_para_marcar)
+        )
         self.limpar_filtros_com_calma()
-        return False, f"ChkSelecionado não encontrado na linha do localizador {localizador}"
+        return True, "OK"
+
+    @staticmethod
+    def _encontrar_subconjunto_com_soma(
+        valores: list[Decimal | None], alvo: Decimal
+    ) -> list[int] | None:
+        """Procura o menor subconjunto de índices cuja soma (em módulo) bate com `alvo`.
+
+        Usado quando um localizador retorna mais linhas na grid do que a transação
+        atual do Excel representa (localizador reaproveitado por outro lançamento).
+        Limitado a grids pequenas (poucas duplicatas na prática) para manter o custo
+        combinatório trivial.
+        """
+        indices = list(range(len(valores)))
+        if len(indices) > 12:
+            return None  # evita custo combinatório explosivo em grids grandes
+
+        for tamanho in range(1, len(indices) + 1):
+            for combinacao in combinations(indices, tamanho):
+                soma = sum(abs(valores[i]) for i in combinacao)
+                if soma == alvo:
+                    return list(combinacao)
+        return None
 
     def _obter_valor_oficial_da_linha(self, linha: Locator) -> Decimal | None:
         """Lê a coluna 'Valor Oficial' da linha usando os headers do grid."""

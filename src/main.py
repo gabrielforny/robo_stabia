@@ -3,8 +3,10 @@ import argparse
 import os
 import shutil
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 
 from config import load_config
@@ -47,6 +49,30 @@ def _pasta_documentos() -> Path:
 
 PASTA_AUTOMACAO_STUR = _pasta_documentos() / "automacao-stur"
 PASTA_FINALIZADAS = PASTA_AUTOMACAO_STUR / "finalizadas"
+
+
+def _apagar_com_retry(arquivo: Path, logger, tentativas: int = 5, espera_segundos: float = 2.0) -> bool:
+    """Tenta apagar o arquivo algumas vezes antes de desistir.
+
+    OneDrive costuma travar o arquivo por 1-3s durante sincronização logo
+    após ele ser lido/escrito; sem retry isso derrubava o processamento
+    inteiro mesmo com o .xlsx final já salvo com sucesso.
+    """
+    for tentativa in range(1, tentativas + 1):
+        try:
+            arquivo.unlink()
+            return True
+        except PermissionError:
+            if tentativa == tentativas:
+                logger.warning(
+                    "Não foi possível apagar %s após %d tentativas (arquivo em uso por outro "
+                    "processo, provavelmente OneDrive ou Excel). Ele permanecerá na pasta e "
+                    "será reprocessado na próxima execução.",
+                    arquivo, tentativas,
+                )
+                return False
+            time.sleep(espera_segundos)
+    return False
 
 
 def mover_para_finalizadas(arquivo_saida: Path) -> Path:
@@ -176,13 +202,20 @@ def processar_latam_vendas(
                     break  # não é falha de browser — não retentar
 
                 candidato_ok = None
+                candidato_comissao = None
+                valor_comissao = None
                 for c in candidatos:
                     if transacao.valor_excel is not None and c.total_fornecedor is not None:
                         if abs(c.total_fornecedor) == abs(transacao.valor_excel):
                             candidato_ok = c
                             break
+                        # Verifica se a diferença é de até 20% (tabela > excel)
+                        diferenca = abs(c.total_fornecedor) - abs(transacao.valor_excel)
+                        if diferenca > 0 and diferenca / abs(c.total_fornecedor) <= Decimal("0.20"):
+                            candidato_comissao = c
+                            valor_comissao = diferenca
 
-                if not candidato_ok:
+                if not candidato_ok and not candidato_comissao:
                     vals = [str(c.total_fornecedor) for c in candidatos]
                     resultado_msg = (
                         f"ERRO | Valor não bate nas Vendas | "
@@ -190,35 +223,44 @@ def processar_latam_vendas(
                     )
                     break  # não é falha de browser — não retentar
 
+                candidato_final = candidato_ok or candidato_comissao
                 logger.info(
-                    "Localizador %s → Venda=%s | TotalForn=%s",
+                    "Localizador %s → Venda=%s | TotalForn=%s%s",
                     transacao.localizador_extraido,
-                    candidato_ok.codigo_venda,
-                    candidato_ok.total_fornecedor,
+                    candidato_final.codigo_venda,
+                    candidato_final.total_fornecedor,
+                    f" | Comissão={valor_comissao}" if valor_comissao else "",
                 )
 
                 try:
-                    stur.seguir_fluxo_venda_ok(
-                        candidato_ok, codigo_autorizacao=transacao.codigo_autorizacao
-                    )
+                    if candidato_ok:
+                        stur.seguir_fluxo_venda_ok(
+                            candidato_ok, codigo_autorizacao=transacao.codigo_autorizacao
+                        )
+                    else:
+                        stur.seguir_fluxo_venda_com_comissao(
+                            candidato_comissao,
+                            valor_comissao=valor_comissao,
+                            codigo_autorizacao=transacao.codigo_autorizacao,
+                        )
                     resultado_msg = (
-                        f"OK Vendas | Venda {candidato_ok.codigo_venda} | "
+                        f"OK Vendas | Venda {candidato_final.codigo_venda} | "
                         f"Loc {transacao.localizador_extraido}"
                     )
                     foi_sucesso = True
                     ultima_exc = None
                     break
                 except VendaJaFaturadaError:
-                    logger.warning("Venda %s já faturada — marcando e seguindo.", candidato_ok.codigo_venda)
+                    logger.warning("Venda %s já faturada — marcando e seguindo.", candidato_final.codigo_venda)
                     resultado_msg = (
-                        f"JÁ FATURADO | Venda {candidato_ok.codigo_venda} | "
+                        f"JÁ FATURADO | Venda {candidato_final.codigo_venda} | "
                         f"Loc {transacao.localizador_extraido}"
                     )
                     break  # condição esperada — não retentar
                 except Exception as exc:
                     logger.warning(
                         "Erro ao processar venda %s (tentativa %d/%d): %s",
-                        candidato_ok.codigo_venda, tentativa, MAX_TENTATIVAS_POR_ITEM, exc,
+                        candidato_final.codigo_venda, tentativa, MAX_TENTATIVAS_POR_ITEM, exc,
                     )
                     ultima_exc = exc
                     continue
@@ -491,6 +533,8 @@ def processar_latam_conferencia(
 
         logger.info("Processando conferência LATAM: %s | %d item(ns)", descricao_busca, len(grupo))
 
+        processados: set[int] = set()
+
         try:
             financeiro.buscar_ou_criar_conferencia_latam(
                 descricao_busca=descricao_busca,
@@ -501,6 +545,8 @@ def processar_latam_conferencia(
             financeiro.abrir_adicionar_titulos()
             financeiro.garantir_coluna_localizador_visivel()
 
+            ok_conferencia: list[Transacao] = []
+
             for transacao in grupo:
                 if deve_parar and deve_parar():
                     logger.warning("Parada solicitada — interrompendo seleção de localizadores.")
@@ -510,14 +556,55 @@ def processar_latam_conferencia(
                     excel_service.acrescentar_resultado(
                         df, transacao, "ERRO Conferência | sem localizador"
                     )
+                    processados.add(transacao.indice_planilha)
                     continue
 
-                encontrado, motivo = financeiro.buscar_e_selecionar_localizador(
-                    localizador=transacao.localizador_extraido,
-                    valor_excel=transacao.valor_excel,
-                )
+                # Um item travado (ex.: timeout por lentidão do STUR) não pode
+                # derrubar os outros 155 já processados: tenta de novo uma vez
+                # e, se persistir, marca só este item como erro e segue em
+                # frente — o que já foi selecionado continua indo para
+                # gravar_titulos()/gravar_conferencia() no final.
+                encontrado = False
+                motivo = ""
+                for tentativa in (1, 2):
+                    try:
+                        encontrado, motivo = financeiro.buscar_e_selecionar_localizador(
+                            localizador=transacao.localizador_extraido,
+                            valor_excel=transacao.valor_excel,
+                        )
+                        break
+                    except ProcessamentoCancelado:
+                        raise
+                    except Exception as exc_item:
+                        if tentativa == 2:
+                            logger.warning(
+                                "Falha ao processar localizador %s na conferência %s "
+                                "após retentativa: %s. Pulando este item e seguindo com os demais.",
+                                transacao.localizador_extraido, descricao_busca, exc_item,
+                            )
+                            excel_service.acrescentar_resultado(
+                                df, transacao,
+                                f"ERRO Conferência | falha ao processar item: "
+                                f"{type(exc_item).__name__}: {exc_item}",
+                            )
+                            processados.add(transacao.indice_planilha)
+                        else:
+                            logger.warning(
+                                "Falha ao processar localizador %s (tentativa %d/2): %s. Tentando de novo.",
+                                transacao.localizador_extraido, tentativa, exc_item,
+                            )
+                            try:
+                                financeiro.limpar_filtros_com_calma()
+                            except Exception:
+                                logger.warning("Não foi possível limpar filtros antes de retentar item.")
+
+                if transacao.indice_planilha in processados:
+                    continue
+
+                processados.add(transacao.indice_planilha)
 
                 if encontrado:
+                    ok_conferencia.append(transacao)
                     resultado_conf = f"OK Conferência | {descricao_busca} | Loc {transacao.localizador_extraido}"
                     if transacao.venda_ja_ok:
                         # Sobrescreve limpo: remove o ERRO Conferência anterior
@@ -538,6 +625,15 @@ def processar_latam_conferencia(
                             df, transacao, f"ERRO Conferência | {motivo}"
                         )
 
+            soma_ok = sum(t.valor_excel for t in ok_conferencia if t.valor_excel is not None)
+            logger.info(
+                "Conferência %s — %d/%d adicionados | Soma dos valores: R$ %s",
+                descricao_busca,
+                len(ok_conferencia),
+                len(grupo),
+                soma_ok,
+            )
+
             financeiro.gravar_titulos()
             financeiro.gravar_conferencia()
 
@@ -546,6 +642,8 @@ def processar_latam_conferencia(
         except Exception as exc:
             logger.exception("Erro no processamento da conferência LATAM %s", descricao_busca)
             for transacao in grupo:
+                if transacao.indice_planilha in processados:
+                    continue
                 excel_service.acrescentar_resultado(
                     df, transacao,
                     f"ERRO Conferência inesperado | {type(exc).__name__}: {exc}",
@@ -660,15 +758,16 @@ def processar_arquivo_aberto(
     headless: bool,
     logger,
     deve_parar=None,
+    somente_conferencia: bool = False,
 ) -> ResultadoProcessamento:
     logger.info("Iniciando processamento do arquivo: %s", arquivo)
 
     df, aba = excel_service.carregar_transacoes(arquivo)
     logger.info("Aba/tipo carregado: %s | Colunas: %s", aba, list(df.columns))
 
-    transacoes = excel_service.montar_transacoes(df, origem_arquivo=arquivo.name)
+    transacoes, transacoes_negativas = excel_service.montar_transacoes(df, origem_arquivo=arquivo.name)
     transacoes_hotel = excel_service.montar_transacoes_hoteis(df, origem_arquivo=arquivo.name)
-    logger.info("Total de linhas LATAM/GOL/AZUL: %d", len(transacoes))
+    logger.info("Total de linhas LATAM/GOL/AZUL: %d | Valores negativos (reservados): %d", len(transacoes), len(transacoes_negativas))
     logger.info("Total de linhas Hotelaria: %d", len(transacoes_hotel))
 
     transacoes_latam = [t for t in transacoes if t.tipo_busca in COMPANHIAS_SUPORTADAS]
@@ -684,39 +783,45 @@ def processar_arquivo_aberto(
 
     if transacoes_latam or transacoes_hotel:
         try:
-            # Fase 1 LATAM: Vendas
-            if transacoes_latam:
-                logger.info("=== FASE 1: Vendas LATAM/GOL/AZUL ===")
-                sucesso_v, erro_v = processar_latam_vendas(
-                    config=config,
-                    headless=headless,
-                    excel_service=excel_service,
-                    df=df,
-                    transacoes_latam=transacoes_latam,
-                    logger=logger,
-                    deve_parar=deve_parar,
-                )
-                total_sucesso += sucesso_v
-                total_erro += erro_v
+            if not somente_conferencia:
+                # Fase 1: Vendas — gerencia o próprio browser com retry por item
+                if transacoes_latam:
+                    logger.info("=== FASE 1: Vendas LATAM/GOL/AZUL ===")
+                    sucesso_v, erro_v = processar_latam_vendas(
+                        config=config,
+                        headless=headless,
+                        excel_service=excel_service,
+                        df=df,
+                        transacoes_latam=transacoes_latam,
+                        logger=logger,
+                        deve_parar=deve_parar,
+                    )
+                    total_sucesso += sucesso_v
+                    total_erro += erro_v
 
-            # Fase 1 Hotel: Vendas
-            if transacoes_hotel:
-                logger.info("=== FASE 1: Vendas Hotelaria ===")
-                sucesso_h, erro_h = processar_hoteis_vendas(
-                    config=config,
-                    headless=headless,
-                    excel_service=excel_service,
-                    df=df,
-                    transacoes_hotel=transacoes_hotel,
-                    logger=logger,
-                    deve_parar=deve_parar,
-                )
-                total_sucesso += sucesso_h
-                total_erro += erro_h
+                # Fase 1 Hotel: Vendas
+                if transacoes_hotel:
+                    logger.info("=== FASE 1: Vendas Hotelaria ===")
+                    sucesso_h, erro_h = processar_hoteis_vendas(
+                        config=config,
+                        headless=headless,
+                        excel_service=excel_service,
+                        df=df,
+                        transacoes_hotel=transacoes_hotel,
+                        logger=logger,
+                        deve_parar=deve_parar,
+                    )
+                    total_sucesso += sucesso_h
+                    total_erro += erro_h
 
-            arquivo_parcial = excel_service.salvar_saida(df, arquivo)
-            logger.info("Backup parcial (pós Vendas) salvo em: %s", arquivo_parcial)
-            excel_service.salvar_no_local_com_cores(df, arquivo)
+                arquivo_parcial = excel_service.salvar_saida(df, arquivo)
+                logger.info("Backup parcial (pós Vendas) salvo em: %s", arquivo_parcial)
+                excel_service.salvar_no_local_com_cores(df, arquivo)
+            else:
+                logger.info(
+                    "=== FASE 1: Vendas — PULADA (modo 'Só Conferência'; "
+                    "assume que a venda já foi ajustada manualmente) ==="
+                )
 
             # Fase 2: Conferências (LATAM + Hotel na mesma sessão de browser)
             logger.info("=== FASE 2: Conferências ===")
@@ -767,7 +872,7 @@ def processar_arquivo_aberto(
     # deixa o .csv original intacto — sem isso ele ficaria na pasta e seria
     # reprocessado na próxima execução.
     if arquivo != arquivo_saida and arquivo.exists():
-        arquivo.unlink()
+        _apagar_com_retry(arquivo, logger)
 
     arquivo_saida = mover_para_finalizadas(arquivo_saida)
     logger.info("Arquivo movido para finalizadas: %s", arquivo_saida)
@@ -789,6 +894,7 @@ def processar_arquivos(
     headless: bool,
     logger=None,
     deve_parar=None,
+    somente_conferencia: bool = False,
 ) -> list[ResultadoProcessamento]:
     config = load_config()
     if logger is None:
@@ -814,7 +920,10 @@ def processar_arquivos(
     if not arquivos:
         raise FileNotFoundError("Nenhum arquivo Excel/CSV válido encontrado para processamento.")
 
-    logger.info("Iniciando processamento — fluxo LATAM: Vendas + Conferências")
+    if somente_conferencia:
+        logger.info("Iniciando processamento — fluxo LATAM: SOMENTE Conferências (Fase 1 pulada)")
+    else:
+        logger.info("Iniciando processamento — fluxo LATAM: Vendas + Conferências")
     logger.info("Arquivos recebidos: %s", [str(a) for a in arquivos])
 
     resultados: list[ResultadoProcessamento] = []
@@ -832,6 +941,7 @@ def processar_arquivos(
                 headless=headless,
                 logger=logger,
                 deve_parar=deve_parar,
+                somente_conferencia=somente_conferencia,
             )
         except ProcessamentoCancelado as exc:
             exc.resultados_parciais = resultados
