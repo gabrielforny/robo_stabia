@@ -909,7 +909,13 @@ def processar_arquivos(
     deve_parar=None,
     somente_conferencia: bool = False,
     tipos_por_arquivo: dict[Path, str] | None = None,
+    forcar_tipo: str | None = None,
 ) -> list[ResultadoProcessamento]:
+    """`forcar_tipo`: quando "latam" ou "hoteis", vale para TODOS os arquivos e tem
+    prioridade sobre `tipos_por_arquivo` — usado pelo seletor "Só Aéreo"/"Só Hotel" da
+    GUI, que restringe a execução inteira a um fluxo independente de qual planilha
+    foi escolhida.
+    """
     config = load_config()
     if logger is None:
         logger = setup_logger(config.logs_dir)
@@ -938,6 +944,8 @@ def processar_arquivos(
         logger.info("Iniciando processamento — fluxo LATAM: SOMENTE Conferências (Fase 1 pulada)")
     else:
         logger.info("Iniciando processamento — fluxo LATAM: Vendas + Conferências")
+    if forcar_tipo:
+        logger.info("Restrito ao fluxo: %s (seleção manual da GUI)", forcar_tipo.upper())
     logger.info("Arquivos recebidos: %s", [str(a) for a in arquivos])
 
     resultados: list[ResultadoProcessamento] = []
@@ -956,7 +964,7 @@ def processar_arquivos(
                 logger=logger,
                 deve_parar=deve_parar,
                 somente_conferencia=somente_conferencia,
-                somente_tipo=(tipos_por_arquivo or {}).get(arquivo),
+                somente_tipo=forcar_tipo or (tipos_por_arquivo or {}).get(arquivo),
             )
         except ProcessamentoCancelado as exc:
             exc.resultados_parciais = resultados

@@ -284,16 +284,27 @@ class ExcelService:
 
 
     def montar_transacoes_hoteis(self, df: pd.DataFrame, origem_arquivo: str | None = None) -> list[TransacaoHotel]:
-        """Retorna transações de Hotelaria: linhas onde col V (OBSERVAÇÃO) está preenchida."""
+        """Retorna transações de Hotelaria.
+
+        Duas formas de identificar uma linha como hotel:
+        - Planilha PADRÃO (finalizada manualmente): col OBSERVAÇÃO preenchida.
+        - Planilha CLARA (export bruto do cartão): coluna "Alias Do Cartão"/"Cartão"
+          contendo "HOTEL". Nesse layout ainda precisamos do Cód. Integração (mesma
+          coluna de OBSERVAÇÃO) preenchido pra buscar a venda no STUR — se a linha for
+          identificada como hotel mas essa coluna estiver vazia, ela é contada em
+          `_ultimo_total_hotel_sem_integracao` e pulada (logada como aviso, não erro).
+        """
         from datetime import datetime
 
         data_fatura_hoje = datetime.today().strftime("%d/%m/%Y")
 
+        tipo_layout = self._identificar_layout(df)
         coluna_obs = self._resolver_coluna_observacao(df)
-        if not coluna_obs:
+        coluna_alias = self._resolver_coluna_alias_cartao(df) if tipo_layout == "CLARA" else None
+
+        if not coluna_obs and not coluna_alias:
             return []
 
-        tipo_layout = self._identificar_layout(df)
         coluna_estabelecimento = self._resolver_coluna_estabelecimento(df, tipo_layout=tipo_layout)
         coluna_data = self._resolver_coluna_data_aprovacao(df, tipo_layout=tipo_layout)
         coluna_valor = self._resolver_coluna_valor(df, tipo_layout=tipo_layout)
@@ -303,10 +314,29 @@ class ExcelService:
         coluna_res = self.config.coluna_resultado
 
         transacoes: list[TransacaoHotel] = []
+        sem_integracao = 0
 
         for index, row in df.iterrows():
-            observacao = str(row.get(coluna_obs, "") or "").strip()
-            if not observacao or observacao.lower() == "nan":
+            observacao = str(row.get(coluna_obs, "") or "").strip() if coluna_obs else ""
+            if observacao.lower() == "nan":
+                observacao = ""
+
+            eh_hotel_por_alias = False
+            if coluna_alias:
+                alias = str(row.get(coluna_alias, "") or "").strip().lower()
+                eh_hotel_por_alias = "hotel" in alias
+
+            if not observacao and not eh_hotel_por_alias:
+                continue
+
+            if not observacao and eh_hotel_por_alias:
+                sem_integracao += 1
+                _log.warning(
+                    "Linha %d identificada como hotel (Alias='%s') mas sem Cód. Integração "
+                    "preenchido — pulando. Preencha a coluna de observação/cód. integração "
+                    "dessa linha para o robô conseguir buscar no STUR.",
+                    index + 2, row.get(coluna_alias, ""),
+                )
                 continue
 
             if coluna_res in df.columns:
@@ -346,6 +376,12 @@ class ExcelService:
                     data_fatura=data_fatura_hoje,
                     origem_arquivo=origem_arquivo or "",
                 )
+            )
+
+        if sem_integracao:
+            _log.warning(
+                "%d linha(s) de hotel identificadas mas SEM Cód. Integração preenchido — "
+                "não processadas nesta execução.", sem_integracao,
             )
 
         return transacoes
@@ -718,16 +754,24 @@ class ExcelService:
         return None
 
     def _resolver_coluna_observacao(self, df: pd.DataFrame) -> str | None:
-        candidatos = ["observacao", "observação", "obs", "obs."]
-        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="observação")
+        candidatos = [
+            "observacao", "observação", "obs", "obs.",
+            "cod integracao", "cod. integracao", "cod integração", "cod. integração",
+            "codigo integracao", "código integração", "cod. de integração", "cod de integracao",
+        ]
+        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="observação/cód. integração")
 
     def _resolver_coluna_titular(self, df: pd.DataFrame) -> str | None:
         candidatos = ["titular", "titular do cartao", "titular do cartão", "nome"]
         return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="titular")
 
     def _resolver_coluna_cliente(self, df: pd.DataFrame) -> str | None:
-        candidatos = ["empresa", "cliente", "company", "nome empresa"]
+        candidatos = ["empresa", "cliente", "company", "nome empresa", "cliente stur"]
         return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="cliente/empresa")
+
+    def _resolver_coluna_alias_cartao(self, df: pd.DataFrame) -> str | None:
+        candidatos = ["alias do cartao", "alias do cartão", "cartao", "cartão"]
+        return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="alias do cartão")
 
     def _normalizar_texto(self, texto: str) -> str:
         return (

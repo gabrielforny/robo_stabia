@@ -28,13 +28,14 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Robô STUR — LATAM / Hotelaria")
-        self.geometry("860x600")
-        self.minsize(700, 480)
+        self.geometry("900x640")
+        self.minsize(720, 500)
         self.configure(bg="#f5f5f5")
         self._log_queue: queue.Queue = queue.Queue()
         self._stop_event = threading.Event()
         self._arquivo_latam: str | None = None
         self._arquivo_hoteis: str | None = None
+        self._modo_fluxo = tk.StringVar(value="ambos")
         self._build_ui()
         self._poll_logs()
 
@@ -47,52 +48,40 @@ class App(tk.Tk):
         top = tk.Frame(self, bg="#f5f5f5", padx=14, pady=12)
         top.pack(fill=tk.X)
 
-        self.btn_iniciar = tk.Button(
-            top,
-            text="▶   Iniciar Processamento",
-            font=("Helvetica", 13, "bold"),
-            bg="#1565c0",
-            fg="white",
-            activebackground="#0d47a1",
-            activeforeground="white",
-            padx=20,
-            pady=10,
-            relief=tk.FLAT,
-            cursor="hand2",
+        def _criar_botao(parent, text, bg, ativo, **kwargs):
+            return tk.Button(
+                parent,
+                text=text,
+                font=("Helvetica", 13, "bold"),
+                bg=bg,
+                fg="white",
+                activebackground=ativo,
+                activeforeground="white",
+                disabledforeground="#e0e0e0",
+                padx=20,
+                pady=10,
+                relief=tk.FLAT,
+                bd=0,
+                highlightthickness=0,
+                cursor="hand2",
+                **kwargs,
+            )
+
+        self.btn_iniciar = _criar_botao(
+            top, "▶   Iniciar Processamento", "#1565c0", "#0d47a1",
             command=self._iniciar,
         )
         self.btn_iniciar.pack(side=tk.LEFT)
 
-        self.btn_conferencia = tk.Button(
-            top,
-            text="🗂   Só Conferência",
-            font=("Helvetica", 13, "bold"),
-            bg="#2e7d32",
-            fg="white",
-            activebackground="#1b5e20",
-            activeforeground="white",
-            padx=20,
-            pady=10,
-            relief=tk.FLAT,
-            cursor="hand2",
+        self.btn_conferencia = _criar_botao(
+            top, "🗂   Só Conferência", "#2e7d32", "#1b5e20",
             command=lambda: self._iniciar(somente_conferencia=True),
         )
         self.btn_conferencia.pack(side=tk.LEFT, padx=(10, 0))
 
-        self.btn_parar = tk.Button(
-            top,
-            text="■   Parar",
-            font=("Helvetica", 13, "bold"),
-            bg="#c62828",
-            fg="white",
-            activebackground="#8e0000",
-            activeforeground="white",
-            padx=20,
-            pady=10,
-            relief=tk.FLAT,
-            cursor="hand2",
-            state=tk.DISABLED,
-            command=self._parar,
+        self.btn_parar = _criar_botao(
+            top, "■   Parar", "#c62828", "#8e0000",
+            state=tk.DISABLED, command=self._parar,
         )
         self.btn_parar.pack(side=tk.LEFT, padx=(10, 0))
 
@@ -101,6 +90,27 @@ class App(tk.Tk):
             fg="#555", bg="#f5f5f5",
         )
         self.lbl_status.pack(side=tk.LEFT, padx=16)
+
+        # ── fluxo: aéreo / hotel / os dois ──────────────────────────────
+        fluxo_frame = tk.Frame(self, bg="#f5f5f5", padx=14)
+        fluxo_frame.pack(fill=tk.X, pady=(0, 6))
+
+        tk.Label(
+            fluxo_frame, text="Executar:", font=("Helvetica", 10, "bold"),
+            bg="#f5f5f5", fg="#333",
+        ).pack(side=tk.LEFT, padx=(0, 8))
+
+        for valor, texto in (
+            ("ambos", "Aéreo + Hotelaria"),
+            ("latam", "Só Aéreo"),
+            ("hoteis", "Só Hotelaria"),
+        ):
+            tk.Radiobutton(
+                fluxo_frame, text=texto, value=valor, variable=self._modo_fluxo,
+                font=("Helvetica", 10), bg="#f5f5f5", fg="#333",
+                selectcolor="#ffffff", activebackground="#f5f5f5",
+                cursor="hand2",
+            ).pack(side=tk.LEFT, padx=(0, 12))
 
         # ── seleção de arquivos ───────────────────────────────────────
         files_frame = tk.Frame(self, bg="#f5f5f5", padx=14, pady=4)
@@ -137,7 +147,8 @@ class App(tk.Tk):
             files_frame,
             text=(
                 "Planilhas diferentes: cada uma processa só o seu fluxo. "
-                "Mesma planilha (ou só uma escolhida): lê os dois fluxos dela."
+                "Mesma planilha (ou só uma escolhida): lê os dois fluxos dela — "
+                "o filtro \"Executar\" acima restringe mesmo assim."
             ),
             font=("Helvetica", 9), fg="#777", bg="#f5f5f5", anchor="w",
         ).pack(fill=tk.X, pady=(2, 0))
@@ -188,7 +199,8 @@ class App(tk.Tk):
         self.frame_resumo.pack_forget()
         self._limpar_log()
         self._stop_event.clear()
-        threading.Thread(target=self._run, args=(somente_conferencia,), daemon=True).start()
+        modo_fluxo = self._modo_fluxo.get()  # lido na thread principal antes de iniciar a thread de trabalho
+        threading.Thread(target=self._run, args=(somente_conferencia, modo_fluxo), daemon=True).start()
 
     def _parar(self):
         self.btn_parar.config(state=tk.DISABLED, text="Parando…")
@@ -196,7 +208,7 @@ class App(tk.Tk):
         self._log("Solicitação de parada recebida — encerrando no próximo ponto seguro (pode levar alguns segundos)…", "WARNING")
         self._stop_event.set()
 
-    def _run(self, somente_conferencia: bool = False):
+    def _run(self, somente_conferencia: bool = False, modo_fluxo: str = "ambos"):
         try:
             # Quando rodando como .exe empacotado, o Playwright extrai seus arquivos numa
             # pasta temporária mas precisa encontrar o Chromium onde foi instalado de fato.
@@ -256,11 +268,16 @@ class App(tk.Tk):
                     "INFO",
                 )
 
+            forcar_tipo = modo_fluxo if modo_fluxo in ("latam", "hoteis") else None
+            if forcar_tipo:
+                self._log(f"Filtro 'Executar' ativo: só {modo_fluxo.upper()}.", "INFO")
+
             resultados = processar_arquivos(
                 arquivos, headless=False, logger=logger,
                 deve_parar=self._stop_event.is_set,
                 somente_conferencia=somente_conferencia,
                 tipos_por_arquivo=tipos_por_arquivo,
+                forcar_tipo=forcar_tipo,
             )
             self.after(0, self._finalizar_ok, resultados)
 
