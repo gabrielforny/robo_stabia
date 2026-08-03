@@ -2,7 +2,7 @@ import re
 from decimal import Decimal
 from logging import Logger
 
-from playwright.sync_api import PlaywrightTimeoutError
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from config import AppConfig
 from models import CandidatoVenda, TransacaoHotel

@@ -14,6 +14,14 @@ if getattr(sys, "frozen", False):
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+# Importado aqui em nível de módulo (não dentro do try/except de _run) de propósito:
+# esse tipo só depende de dataclasses/decimal, nunca falha. Se ficasse dentro do try e
+# algum import mais pesado (pandas/playwright/stur_*) quebrasse antes dele, o próprio
+# `except ProcessamentoCancelado` do try daria UnboundLocalError ao tentar avaliar o
+# nome — mascarando o erro real e travando a thread de trabalho sem nenhum log, com a
+# GUI parecendo congelada pra sempre (botões travados, sem mensagem de erro nenhuma).
+from models import ProcessamentoCancelado
+
 
 class _QueueHandler(logging.Handler):
     def __init__(self, log_queue: queue.Queue):
@@ -227,9 +235,14 @@ class App(tk.Tk):
 
             self._garantir_playwright()
 
+            # pandas/openpyxl/módulos do STUR só são importados aqui — na primeira
+            # execução após abrir o .exe isso pode levar bastante tempo (extração +
+            # import de libs grandes) sem nenhum log aparecer nesse meio tempo, o que
+            # parece um travamento. Log explícito pra deixar isso visível.
+            self._log("Carregando módulos (pandas, Excel, STUR)… pode levar até 1 minuto na primeira execução.", "INFO")
             from config import load_config, _base_dir_padrao
             from main import PASTA_AUTOMACAO_STUR, processar_arquivos, resolver_arquivos_e_tipos
-            from models import ProcessamentoCancelado
+            self._log("Módulos carregados.", "OK")
 
             env_esperado = _base_dir_padrao() / ".env"
             self._log(f"Procurando .env em: {env_esperado}", "INFO")
@@ -324,42 +337,61 @@ class App(tk.Tk):
 
     def _garantir_playwright(self):
         """
-        Verifica se algum browser está disponível (Edge, Chrome ou Chromium).
-        Edge e Chrome são usados diretamente se instalados no Windows.
-        Só tenta instalar o Chromium do Playwright como último recurso.
+        Verifica se algum browser está disponível (Edge, Chrome ou Chromium), com timeout.
+
+        Roda a checagem numa thread separada porque o `with sync_playwright() as p:`
+        finaliza o processo interno (Node.js) do Playwright ao sair do bloco — e essa
+        finalização não tem timeout. Se algo travar esse encerramento (ex.: antivírus/EDR
+        segurando o processo pra escanear), a checagem simplesmente nunca retorna e o
+        robô fica parado pra sempre sem log nenhum, dando a impressão de estar travado.
+        Com o timeout aqui, se isso acontecer avisamos e seguimos em frente mesmo assim —
+        essa checagem é só um diagnóstico prévio, não bloqueia o funcionamento real.
         """
-        import platform
+        thread = threading.Thread(target=self._verificar_browser_disponivel, daemon=True)
+        thread.start()
+        thread.join(timeout=25)
+        if thread.is_alive():
+            self._log(
+                "Verificação de navegador demorou demais e foi ignorada (pode ser "
+                "antivírus/EDR segurando o processo) — seguindo com o processamento.",
+                "WARNING",
+            )
+
+    def _verificar_browser_disponivel(self):
         from playwright.sync_api import sync_playwright
 
-        with sync_playwright() as p:
-            for channel in ("msedge", "chrome"):
+        try:
+            with sync_playwright() as p:
+                for channel in ("msedge", "chrome"):
+                    try:
+                        b = p.chromium.launch(channel=channel, headless=True)
+                        b.close()
+                        self._log(f"Browser disponível: {channel}", "OK")
+                        return
+                    except Exception:
+                        pass
+
+                # Nenhum browser do sistema — tenta instalar Chromium via driver do Playwright
                 try:
-                    b = p.chromium.launch(channel=channel, headless=True)
+                    b = p.chromium.launch(headless=True)
                     b.close()
-                    self._log(f"Browser disponível: {channel}", "OK")
+                    self._log("Browser disponível: chromium (playwright)", "OK")
                     return
                 except Exception:
                     pass
 
-            # Nenhum browser do sistema — tenta instalar Chromium via driver do Playwright
+            self._log("Nenhum browser encontrado. Instalando Chromium…", "WARNING")
+            # Usa o driver interno do Playwright para instalar (funciona em .exe congelado)
             try:
-                b = p.chromium.launch(headless=True)
-                b.close()
-                self._log("Browser disponível: chromium (playwright)", "OK")
-                return
-            except Exception:
-                pass
-
-        self._log("Nenhum browser encontrado. Instalando Chromium…", "WARNING")
-        # Usa o driver interno do Playwright para instalar (funciona em .exe congelado)
-        try:
-            from playwright._impl._driver import compute_driver_executable
-            driver = compute_driver_executable()
-            env = {**__import__("os").environ}
-            subprocess.run([str(driver), "install", "chromium"], env=env, check=True, capture_output=True)
-            self._log("Chromium instalado com sucesso.", "OK")
+                from playwright._impl._driver import compute_driver_executable
+                driver = compute_driver_executable()
+                env = {**__import__("os").environ}
+                subprocess.run([str(driver), "install", "chromium"], env=env, check=True, capture_output=True)
+                self._log("Chromium instalado com sucesso.", "OK")
+            except Exception as exc:
+                self._log(f"Falha ao instalar Chromium: {exc}", "ERROR")
         except Exception as exc:
-            self._log(f"Falha ao instalar Chromium: {exc}", "ERROR")
+            self._log(f"Erro ao verificar navegador disponível: {exc}", "ERROR")
 
     # ------------------------------------------------------------------
     # Callbacks do thread principal
