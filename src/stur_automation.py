@@ -177,7 +177,21 @@ class SturAutomation:
             page.evaluate("Redirecionar('ListaVendas.aspx?ore')")
 
         self.esperar("tela de Vendas carregando")
-        self.aguardar_campo_busca()
+
+        try:
+            self.aguardar_campo_busca()
+        except PlaywrightTimeoutError:
+            # STUR pode demorar mais que o normal pra carregar logo após o login
+            # (primeira navegação da sessão). Antes de desistir, tenta forçar a
+            # navegação via JS uma segunda vez e espera de novo.
+            self.logger.warning(
+                "Campo de busca não apareceu a tempo — tentando navegar de novo "
+                "via JavaScript antes de desistir."
+            )
+            page.evaluate("Redirecionar('ListaVendas.aspx?ore')")
+            self.esperar("tela de Vendas carregando (2ª tentativa)")
+            self.aguardar_campo_busca()
+
         self.logger.info("Tela de Vendas pronta.")
 
     # ==========================================================
@@ -873,7 +887,7 @@ class SturAutomation:
     # ==========================================================
 
     def aguardar_campo_busca(self) -> None:
-        self._frame().locator(SELECTORS["campo_busca"]).first.wait_for(state="visible", timeout=20000)
+        self._frame().locator(SELECTORS["campo_busca"]).first.wait_for(state="visible", timeout=30000)
 
     def esperar(self, motivo: str = "") -> None:
         if motivo:
