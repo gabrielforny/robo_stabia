@@ -1,0 +1,421 @@
+2026-08-07 06:37:58,802 | INFO | robo_stur | Iniciando processamento — fluxo LATAM: Vendas + Conferências
+2026-08-07 06:37:58,802 | INFO | robo_stur | Restrito ao fluxo: LATAM (seleção manual da GUI)
+2026-08-07 06:37:58,803 | INFO | robo_stur | Arquivos recebidos: ['/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/Clara-transactions-Jul 27, 2026, 6_40_01 PM.csv']
+2026-08-07 06:37:58,803 | INFO | robo_stur | Iniciando processamento do arquivo: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/Clara-transactions-Jul 27, 2026, 6_40_01 PM.csv
+2026-08-07 06:37:58,808 | INFO | robo_stur | Aba/tipo carregado: CSV | Colunas: ['Data da Transação', 'Extrato da conta', 'Transação', 'Valor original', 'Moeda original', 'Valor em R$', 'Cartão', 'Alias Do Cartão', 'Status', 'Status de aprovação', 'Nome do aprovador', 'Nota do aprovador', 'Código de autorização', 'Categoria da Compra', 'Recibo', 'Nome dos Recibos', 'Titular', 'Grupos', 'Localização', 'Etiquetas', 'Descrição']
+2026-08-07 06:37:58,835 | INFO | robo_stur | Aéreas para processar (64):
+  Linha   2 | [COMPLETO] | LATAM DCP ND*WGRHTA
+  Linha   8 | [COMPLETO] | LATAM DCP ND*UFUPIN
+  Linha  14 | [COMPLETO] | LATAM DCP ND*JKBLBX
+  Linha  31 | [COMPLETO] | LATAM DCP ND*HKDAQO
+  Linha  32 | [COMPLETO] | LATAM DCP ND*JRXRHZ
+  Linha  33 | [COMPLETO] | LATAM DCP ND*KZGBTR
+  Linha  34 | [COMPLETO] | LATAM DCP ND*GIDDAT
+  Linha  35 | [COMPLETO] | LATAM DCP ND*SJWKQP
+  Linha  51 | [COMPLETO] | LATAM DCP ND*OZIOLE
+  Linha  52 | [COMPLETO] | LATAM DCP ND*JWMRTJ
+  Linha  53 | [COMPLETO] | LATAM DCP ND*DJEKOD
+  Linha  54 | [COMPLETO] | LATAM DCP ND*CDNSBK
+  Linha  55 | [COMPLETO] | LATAM DCP ND*WGJRQK
+  Linha  56 | [COMPLETO] | LATAM DCP ND*DHGYEB
+  Linha  57 | [COMPLETO] | LATAM DCP ND*DJJVVP
+  Linha  59 | [COMPLETO] | LATAM DCP ND*DGGJLK
+  Linha  75 | [COMPLETO] | LATAM DCP ND*YUUTEK
+  Linha  76 | [COMPLETO] | LATAM DCP ND*HEAOXB
+  Linha  77 | [COMPLETO] | LATAM DCP ND*UZUTIS
+  Linha  78 | [COMPLETO] | LATAM DCP ND*QMDXVZ
+  Linha  79 | [COMPLETO] | LATAM DCP ND*YMRQXB
+  Linha  80 | [COMPLETO] | LATAM DCP ND*AKUPXJ
+  Linha  81 | [COMPLETO] | LATAM DCP ND*QOTPEK
+  Linha  82 | [COMPLETO] | LATAM DCP ND*UTXTFK
+  Linha  83 | [COMPLETO] | LATAM DCP ND*UWCAUA
+  Linha  84 | [COMPLETO] | AZUL LINHAS PERYHB
+  Linha  85 | [COMPLETO] | LATAM DCP ND*UUWSSI
+  Linha  87 | [COMPLETO] | LATAM DCP ND*UYKKSJ
+  Linha  92 | [COMPLETO] | AZUL LINHAS YR87KK
+  Linha  93 | [COMPLETO] | LATAM DCP ND*ITVFEP
+  Linha  96 | [COMPLETO] | GOL LINHAS A*YTJQSY019
+  Linha  97 | [COMPLETO] | GOL LINHAS A*YKWHKQ017
+  Linha 106 | [COMPLETO] | AZUL LINHAS EMH24D
+  Linha 112 | [COMPLETO] | LATAM DCP ND*IZLIIZ
+  Linha 113 | [COMPLETO] | LATAM DCP ND*FDKFRP
+  Linha 114 | [COMPLETO] | AZUL LINHAS AQEYPX
+  Linha 115 | [COMPLETO] | LATAM DCP ND*IRAZJZ
+  Linha 116 | [COMPLETO] | LATAM DCP ND*EJFKCF
+  Linha 117 | [COMPLETO] | LATAM DCP ND*COQXKB
+  Linha 118 | [COMPLETO] | LATAM DCP ND*UNEATW
+  Linha 121 | [COMPLETO] | AZUL LINHAS TW91RT
+  Linha 123 | [COMPLETO] | LATAM DCP ND*FTRAFT
+  Linha 133 | [COMPLETO] | GOL LINHAS A*SKDPBY011
+  Linha 134 | [COMPLETO] | LATAM DCP ND*SQURHG
+  Linha 136 | [COMPLETO] | LATAM DCP ND*NNDMBO
+  Linha 137 | [COMPLETO] | LATAM DCP ND*KEBSAP
+  Linha 138 | [COMPLETO] | LATAM DCP ND*KVBOGD
+  Linha 142 | [COMPLETO] | LATAM DCP ND*YWTUVV
+  Linha 145 | [COMPLETO] | LATAM DCP ND*NRMEIN
+  Linha 146 | [COMPLETO] | LATAM DCP ND*NTNRMK
+  Linha 151 | [COMPLETO] | LATAM DCP ND*AGFXJQ
+  Linha 154 | [COMPLETO] | LATAM DCP ND*OBRKNK
+  Linha 158 | [COMPLETO] | LATAM DCP ND*FMQCKB
+  Linha 159 | [COMPLETO] | LATAM DCP ND*NSBPSX
+  Linha 177 | [COMPLETO] | LATAM DCP ND*MAUUOQ
+  Linha 178 | [COMPLETO] | LATAM DCP ND*OZKZNP
+  Linha 179 | [COMPLETO] | LATAM DCP ND*EUPPIS
+  Linha 180 | [COMPLETO] | LATAM DCP ND*DHSCNL
+  Linha 201 | [COMPLETO] | LATAM DCP ND*SBGUGN
+  Linha 202 | [COMPLETO] | LATAM DCP ND*QCBHOV
+  Linha 203 | [COMPLETO] | LATAM DCP ND*ACJUJE
+  Linha 204 | [COMPLETO] | LATAM DCP ND*IMLWKK
+  Linha 205 | [COMPLETO] | LATAM DCP ND*UFYHBK
+  Linha 206 | [COMPLETO] | LATAM DCP ND*QBFHIA
+2026-08-07 06:37:58,835 | INFO | robo_stur | Ignoradas — não são aéreas (161):
+  Linha   3 | ZP *B2B URBAN L
+  Linha   4 | IOF - COMPRA INTERNACIONAL
+  Linha   5 | EVELOP AIRLINES
+  Linha   6 | ZP *B2B IBIZA PLAZA HO
+  Linha   7 | KM 01 SERVICOS DE HOTE
+  Linha   9 | URBAN L GESTAO HOTELEI
+  Linha  10 | URBAN L GESTAO HOTELEI
+  Linha  11 | ZP *B2B HILTON GARDEN
+  Linha  12 | ZP *B2B IBIS CONTAGEM
+  Linha  13 | ZP *B2B HILTON GARDEN
+  Linha  15 | ZP *B2B GRAN VILLAGIO
+  Linha  16 | ZP *B2B GRAN VILLAGIO
+  Linha  17 | ZP *B2B GRAN VILLAGIO
+  Linha  18 | ZP *B2B RIALE IMPERIAL
+  Linha  19 | CHARLIE ACOMODACOES
+  Linha  20 | ZP *B2B BLUEMAR HOTEL
+  Linha  21 | ZP *B2B BLUEMAR HOTEL
+  Linha  22 | ZP *B2B HOTEL UNIVERSI
+  Linha  23 | ZP *B2B NOBILE INN JUN
+  Linha  24 | POSTO LUGANO
+  Linha  25 | CASA DO SUCO WING
+  Linha  26 | BUS SERVICOS*ONIBUS
+  Linha  27 | Churzancanaro
+  Linha  28 | AURUM HOTEL
+  Linha  29 | IOF - COMPRA INTERNACIONAL
+  Linha  36 | ZP *B2B ESUITES CAMPOS
+  Linha  37 | ZP *B2B GOLDEN TULIP S
+  Linha  38 | LA CAMPESINA GALETERIA
+  Linha  39 | ZP *B2B URBAN L
+  Linha  40 | ZP *B2B URBAN L
+  Linha  41 | DOM BARRA HOTEL
+  Linha  42 | ZP *B2B HOTEL GRAAL IN
+  Linha  43 | ACARAU RIVIERA
+  Linha  44 | ACARAU RIVIERA
+  Linha  45 | ZP *B2B NEO PARK HOTEL
+  Linha  46 | DA VICENTE
+  Linha  47 | PAO DE QUEIJO
+  Linha  48 | 360dialog
+  Linha  49 | 99APP *99App
+  Linha  50 | 99APP *99App
+  Linha  58 | EMPREENDIMENTOS HOTELE
+  Linha  60 | MERCADOLIVRE*MERCADOLI
+  Linha  61 | ZP *B2B SUMMIT SUITES
+  Linha  62 | HOTEL ZE MARIA
+  Linha  63 | ZP *B2B LIDIANI VITAL
+  Linha  64 | URBAN L GESTAO HOTELEI
+  Linha  65 | ZP *B2B DOMANI HOTEL
+  Linha  66 | ZP *B2B DOMANI HOTEL
+  Linha  67 | ZP *B2B DOMANI HOTEL
+  Linha  68 | ZP *B2B DOMANI HOTEL
+  Linha  69 | GREEN PLACE FLAT
+  Linha  70 | BUS SERVICOS*ONIBUS
+  Linha  71 | LINK NEO PARK HOTEL
+  Linha  72 | TALHERES GASTRONOMIA
+  Linha  73 | BUS SERVICOS*ONIBUS
+  Linha  74 | POUSADA CRAVO E CANELA
+  Linha  86 | WINDSOR CALIFORNIA HOT
+  Linha  88 | URBAN L GESTAO HOTELEI
+  Linha  89 | URBAN L GESTAO HOTELEI
+  Linha  90 | URBAN L GESTAO HOTELEI
+  Linha  91 | BUS SERVICOS*ONIBUS
+  Linha  94 | EMPREENDIMENTOS HOTELE
+  Linha  95 | EMPREENDIMENTOS HOTELE
+  Linha  98 | KM 01 SERVICOS DE HOTE
+  Linha  99 | WYNDHAM RIO BARRA
+  Linha 100 | PG *TXENTREGVISTO
+  Linha 101 | MP *ODPTECH
+  Linha 102 | HOTEL JARDIM IRACEMA
+  Linha 103 | SUPABASE
+  Linha 104 | ZP *B2B HOTEL CAIUA EX
+  Linha 105 | ZP *B2B HOTEL CAIUA EX
+  Linha 107 | STUDIO COMPACT FOTO
+  Linha 108 | PLATINUM PARK
+  Linha 109 | IOF - COMPRA INTERNACIONAL
+  Linha 110 | IOF - COMPRA INTERNACIONAL
+  Linha 111 | POUSADA CRAVO E CANELA
+  Linha 119 | PANROTAS EDITORA
+  Linha 120 | ZP *B2B LAVRAS APART
+  Linha 122 | NAC JARAGUA
+  Linha 124 | AIRALO
+  Linha 125 | AIRBNB * HMZFZE5H8R
+  Linha 126 | ZP *B2B GO INN BETIM
+  Linha 127 | SLAVIERO EMPREE HOTEL
+  Linha 128 | ZP *B2B HOTEL POUSADA
+  Linha 129 | HOTEL ARAUCARIA MARING
+  Linha 130 | ZP *B2B IPE CENTER HOT
+  Linha 131 | IOF - COMPRA INTERNACIONAL
+  Linha 132 | IOF - COMPRA INTERNACIONAL
+  Linha 135 | CENTRAL NOTE IMPORT - 3/6
+  Linha 139 | VICTORY BUSINESS
+  Linha 140 | VICTORY BUSINESS
+  Linha 141 | VICTORY BUSINESS
+  Linha 143 | HOTEL PALMEIRA IMPERIA
+  Linha 144 | HOTEL PALMEIRA IMPERIA
+  Linha 147 | KM 01 SERVICOS DE HOTE
+  Linha 148 | AGENCIA DE VIAGEM - 8/10
+  Linha 149 | ZP *B2B HOTEL VILLAOES
+  Linha 150 | ZP *B2B SAN DIEGO SUIT
+  Linha 152 | ZP *B2B ROYAL PALM TOW
+  Linha 153 | ZP *B2B ROYAL PALM TOW
+  Linha 155 | ZP *B2B COMFORT HOTEL
+  Linha 156 | MSC CRUZEIROS - 7/12
+  Linha 157 | LUZ PLAZA HOTEL
+  Linha 160 | HOTEL IPE CENTER
+  Linha 161 | HOTEL SAO MARCOS ORLAN
+  Linha 162 | HOTEL SAO MARCOS ORLAN
+  Linha 163 | EUROPLUS OPERADORA
+  Linha 164 | ZP *B2B OITIS HOTEL
+  Linha 165 | HOTEL SAO MARCOS ORLAN
+  Linha 166 | COPCENTER GRAFICA EXPR
+  Linha 167 | EC *ODPTECH
+  Linha 168 | LEROY MERLIN
+  Linha 169 | PLAZZA HOTEL
+  Linha 170 | PLAZZA HOTEL
+  Linha 171 | PLAZZA HOTEL
+  Linha 172 | VILLAGE PLAZA
+  Linha 173 | HOTEL RECANTO DO MAR L
+  Linha 174 | IOF - COMPRA INTERNACIONAL
+  Linha 175 | IOF - COMPRA INTERNACIONAL
+  Linha 181 | AURUM HOTEL
+  Linha 182 | SLAVIERO EMPREE HOTEL
+  Linha 183 | BUS SERVICOS*ONIBUS
+  Linha 184 | KM 01 SERVICOS DE HOTE
+  Linha 185 | HOTEL SAINT MORITZ
+  Linha 186 | BUDDY GUY'S LEGENDS
+  Linha 187 | COLONIAL FLAT
+  Linha 188 | ZP *B2B GOLDMEN BUSINE
+  Linha 189 | ZP *B2B GOLDMEN BUSINE
+  Linha 190 | IBIS NOVA SERRANA
+  Linha 191 | INDAIA PARK HOTEL
+  Linha 192 | ZP *B2B NOBILE INN JUN
+  Linha 193 | DLC*ASSIST CARD
+  Linha 194 | DLC*ASSIST CARD
+  Linha 195 | 0018 HOTEL LAGHETTO V
+  Linha 196 | 0018 HOTEL LAGHETTO V
+  Linha 197 | HOTEL JARDIM IRACEMA
+  Linha 198 | HOTEL CAFE ROYAL DE MI
+  Linha 199 | HOTEL CAFE ROYAL DE MI
+  Linha 200 | BUDDY GUY'S LEGENDS
+  Linha 207 | HOTEL RECANTO DO MAR L
+  Linha 208 | DSA SERVICOS E HOTELAR
+  Linha 209 | ZP *B2B ESUITES CAMPOS
+  Linha 210 | HOTEL SAINT MORITZ
+  Linha 211 | HOTEL RECANTO DO MAR L
+  Linha 212 | ZP *B2B BESSA BEACH HO
+  Linha 213 | ZP *B2B BESSA BEACH HO
+  Linha 214 | HOTEL JARDIM IRACEMA
+  Linha 215 | ZP *B2B LIDIANI VITAL
+  Linha 216 | ZP *B2B LIDIANI VITAL
+  Linha 217 | ZP *B2B LIDIANI VITAL
+  Linha 218 | MARINAS MACEIO HOTEL
+  Linha 219 | EC *ODPTECH
+  Linha 220 | KM 01 SERVICOS DE HOTE
+  Linha 221 | BUS SERVICOS*ONIBUS
+  Linha 222 | ZP *B2B HOTEL GALLI LO
+  Linha 223 | DAYS INN CASCAVEL -
+  Linha 224 | BUS SERVICOS*ONIBUS
+  Linha 225 | HOTEL TUPINAMBA LTDA
+  Linha 226 | HOTEL TUPINAMBA LTDA
+  Linha 227 | R COMENDADOR ARAUJO
+  Linha 228 | R COMENDADOR ARAUJO
+2026-08-07 06:37:58,835 | INFO | robo_stur | Valor negativo — reservadas para fluxo futuro (5 | soma: -5682.45):
+  Linha  30 | -145.0 | ESTORNO DE MP *VIAHOTEL
+  Linha 176 | -97.38 | ESTORNO DE LATAM DCP ND*SQURHG
+  Linha 229 | -5226.96 | ESTORNO DE LATAM DCP ND*IEBZAO
+  Linha 230 | -108.09 | ESTORNO DE AZUL LINHAS OPV7XN
+  Linha 231 | -105.02 | ESTORNO DE GOL LINHAS A*MLEDXJ018
+2026-08-07 06:37:58,835 | INFO | robo_stur | Total de linhas LATAM/GOL/AZUL: 225 | Valores negativos (reservados): 5
+2026-08-07 06:37:58,835 | INFO | robo_stur | Total de linhas Hotelaria: 0
+2026-08-07 06:37:58,835 | INFO | robo_stur | LATAM/GOL/AZUL: 64 | Outros (ignorados nesta versão): 161 | Hotelaria: 0
+2026-08-07 06:37:58,835 | INFO | robo_stur | === FASE 1: Vendas LATAM/GOL/AZUL ===
+2026-08-07 06:37:59,365 | INFO | robo_stur | Acessando STUR: https://ww3.sturweb.com.br/STABIATURISMO/Login.aspx
+2026-08-07 06:38:02,086 | INFO | robo_stur | Aguardando 3s — usuário preenchido
+2026-08-07 06:38:05,442 | INFO | robo_stur | Aguardando 3s — senha preenchida
+2026-08-07 06:38:10,838 | INFO | robo_stur | Aguardando 3s — login enviado
+2026-08-07 06:38:16,849 | INFO | robo_stur | Login realizado.
+2026-08-07 06:38:16,851 | INFO | robo_stur | Acessando Operacional -> Vendas
+2026-08-07 06:38:17,233 | INFO | robo_stur | Aguardando 3s — hover no menu Operacional
+2026-08-07 06:38:20,592 | INFO | robo_stur | Aguardando 3s — tela de Vendas carregando
+2026-08-07 06:39:08,602 | WARNING | robo_stur | Campo de busca não apareceu a tempo — tentando navegar de novo via JavaScript antes de desistir.
+2026-08-07 06:39:08,615 | INFO | robo_stur | Aguardando 3s — tela de Vendas carregando (2ª tentativa)
+2026-08-07 06:39:56,626 | ERROR | robo_stur | [Diagnóstico] URL atual: https://ww3.sturweb.com.br/STABIATURISMO/index.aspx
+2026-08-07 06:39:56,637 | ERROR | robo_stur | [Diagnóstico] Título da página: STURWEB - Sistema para gerenciamento de agências de viagens
+2026-08-07 06:39:56,907 | ERROR | robo_stur | [Diagnóstico] Screenshot salvo em: /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/logs/screenshots/erro_tela_vendas_nao_carregou_20260807_063956.png
+2026-08-07 06:39:56,909 | ERROR | robo_stur | [Diagnóstico] Texto visível na página (primeiros 800 chars): Sexta
+
+Ago 2026
+
+7
+
+06:39:56
+
+STABIA VIAGENS E TURISMO LTDA
+
+STUR
+
+WEB
+
+Full
+
+Sistema para Agências de Viagens
+
+Home
+		
+|
+		
+Cadastros
+	
+	
+|
+		
+Operacional
+	
+	
+|
+		
+Integrações
+	
+	
+|
+		
+Financeiro
+	
+	
+|
+		
+Relatórios
+	
+	
+|
+		
+Utilitários
+	
+	
+|
+		
+LGPD e Segurança
+	
+	
+|
+		
+Sair
+
+
+2026-08-07 06:39:57,009 | ERROR | robo_stur | Erro inesperado durante processamento do arquivo /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/Clara-transactions-Jul 27, 2026, 6_40_01 PM.csv
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 803, in processar_arquivo_aberto
+    sucesso_v, erro_v = processar_latam_vendas(
+                        ~~~~~~~~~~~~~~~~~~~~~~^
+        config=config,
+        ^^^^^^^^^^^^^^
+    ...<5 lines>...
+        deve_parar=deve_parar,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 142, in processar_latam_vendas
+    _abrir_nova_sessao()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 131, in _abrir_nova_sessao
+    s.acessar_tela_vendas()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 198, in acessar_tela_vendas
+    self.aguardar_campo_busca()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 922, in aguardar_campo_busca
+    self._frame().locator(SELECTORS["campo_busca"]).first.wait_for(state="visible", timeout=45000)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 18005, in wait_for
+    self._sync(self._impl_obj.wait_for(timeout=timeout, state=state))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 692, in wait_for
+    await self._frame.wait_for_selector(
+        self._selector, strict=True, timeout=timeout, state=state
+    )
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 369, in wait_for_selector
+    await self._channel.send(
+        "waitForSelector", self._timeout, locals_to_params(locals())
+    )
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Locator.wait_for: Timeout 45000ms exceeded.
+Call log:
+  - waiting for locator("#sturweb").content_frame.locator("#c0_PH1_UsrPesquisaRapidaLista1_EdtPesquisa").first to be visible
+
+2026-08-07 06:39:57,010 | ERROR | robo_stur | Erro inesperado ao processar /Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/input/Clara-transactions-Jul 27, 2026, 6_40_01 PM.csv
+Traceback (most recent call last):
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 959, in processar_arquivos
+    resultado = processar_arquivo_aberto(
+        arquivo=arquivo,
+    ...<6 lines>...
+        somente_tipo=forcar_tipo or (tipos_por_arquivo or {}).get(arquivo),
+    )
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 803, in processar_arquivo_aberto
+    sucesso_v, erro_v = processar_latam_vendas(
+                        ~~~~~~~~~~~~~~~~~~~~~~^
+        config=config,
+        ^^^^^^^^^^^^^^
+    ...<5 lines>...
+        deve_parar=deve_parar,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 142, in processar_latam_vendas
+    _abrir_nova_sessao()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/main.py", line 131, in _abrir_nova_sessao
+    s.acessar_tela_vendas()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 198, in acessar_tela_vendas
+    self.aguardar_campo_busca()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/gabrielfornydesouzamuniz/Documents/projetos/robo_stabia/src/stur_automation.py", line 922, in aguardar_campo_busca
+    self._frame().locator(SELECTORS["campo_busca"]).first.wait_for(state="visible", timeout=45000)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/sync_api/_generated.py", line 18005, in wait_for
+    self._sync(self._impl_obj.wait_for(timeout=timeout, state=state))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_locator.py", line 692, in wait_for
+    await self._frame.wait_for_selector(
+        self._selector, strict=True, timeout=timeout, state=state
+    )
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_frame.py", line 369, in wait_for_selector
+    await self._channel.send(
+        "waitForSelector", self._timeout, locals_to_params(locals())
+    )
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Locator.wait_for: Timeout 45000ms exceeded.
+Call log:
+  - waiting for locator("#sturweb").content_frame.locator("#c0_PH1_UsrPesquisaRapidaLista1_EdtPesquisa").first to be visible
+

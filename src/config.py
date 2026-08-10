@@ -19,6 +19,7 @@ class AppConfig:
     stur_url: str
     stur_user: str
     stur_password: str
+    stur_totp_secret: str | None
     excel_sheet_transacoes: str | None
     coluna_localizador: str | None
     coluna_valor_excel: str | None
@@ -53,6 +54,10 @@ def load_config() -> AppConfig:
         stur_url=getenv("STUR_URL", "").strip(),
         stur_user=getenv("STUR_USER", "").strip(),
         stur_password=getenv("STUR_PASSWORD", "").strip(),
+        # Chave de configuração do 2FA (TOTP) do STUR — mesma chave mostrada na tela
+        # "Configurações de Autenticação do Usuário" (Google Authenticator). Com ela o
+        # robô gera o código de login sozinho, sem depender de alguém com o celular.
+        stur_totp_secret=(getenv("STUR_TOTP_SECRET") or "").strip().replace(" ", "") or None,
         excel_sheet_transacoes=(getenv("EXCEL_SHEET_TRANSACOES") or "").strip() or None,
         coluna_localizador=(getenv("COLUNA_LOCALIZADOR") or "").strip() or None,
         coluna_valor_excel=(getenv("COLUNA_VALOR_EXCEL") or "").strip() or None,

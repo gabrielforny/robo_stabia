@@ -19,6 +19,7 @@ SELECTORS = {
     "login_usuario": "#c0_PH1_EdtUsuario",
     "login_senha": "#c0_PH1_EdtSenha",
     "login_botao": "#c0_PH1_BtnLogin",
+    "login_2fa_codigo": "#c0_PH1_Edt2FA",
     "usuario_ativo_msg": "#c0_PH1_Label1",
     "usuario_ativo_desbloquear": "#c0_PH1_LinkButton1",
 
@@ -101,7 +102,11 @@ class SturAutomation:
             viewport={"width": 1366, "height": 768},
         )
         self.page = self._context.new_page()
-        self.page.set_default_timeout(20000)
+        # 20s vinha sendo insuficiente em várias etapas (login, tela de Vendas) em
+        # conexões/dias mais lentos — várias esperas do robô batiam nesse mesmo valor
+        # de timeout. 45s dá bem mais folga sem deixar o robô "preso" indefinidamente
+        # em caso de falha real (ainda tem timeout, só que maior).
+        self.page.set_default_timeout(45000)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -130,6 +135,15 @@ class SturAutomation:
         page.locator(SELECTORS["login_botao"]).click()
         self.esperar("login enviado")
 
+        self._tratar_usuario_ativo_se_necessario(page)
+        self._autenticar_totp_se_necessario(page)
+        # Com MFA habilitado, o aviso de "usuário ativo em outra sessão" pode só
+        # aparecer depois do código confirmado (não antes, como sem MFA) — checa de novo.
+        self._tratar_usuario_ativo_se_necessario(page)
+
+        self.logger.info("Login realizado.")
+
+    def _tratar_usuario_ativo_se_necessario(self, page) -> None:
         if self._existe_page(SELECTORS["usuario_ativo_msg"], timeout=3000):
             texto = page.locator(SELECTORS["usuario_ativo_msg"]).inner_text().strip()
             if "Usuário ativo em outra sessão" in texto:
@@ -137,7 +151,39 @@ class SturAutomation:
                 page.locator(SELECTORS["usuario_ativo_desbloquear"]).click()
                 self.esperar("usuário desbloqueado")
 
-        self.logger.info("Login realizado.")
+    def _autenticar_totp_se_necessario(self, page) -> None:
+        """Preenche o código de 2FA (Google Authenticator/TOTP) se o STUR pedir após o
+        login, usando a chave configurada em STUR_TOTP_SECRET — sem depender de um
+        humano com o app aberto em cada execução.
+
+        Tela real (confirmada com o cliente): "Verificação adicional necessária" / "Sua
+        conta está protegida com a autenticação multifator (MFA)", campo
+        #c0_PH1_Edt2FA e botão #c0_PH1_BtnLogin (mesmo ID do botão de login normal).
+        """
+        try:
+            apareceu = page.locator(SELECTORS["login_2fa_codigo"]).first.is_visible(timeout=5000)
+        except Exception:
+            apareceu = False
+
+        if not apareceu:
+            return
+
+        self.logger.info("STUR pediu autenticação em 2 fatores (MFA/TOTP).")
+
+        if not self.config.stur_totp_secret:
+            raise RuntimeError(
+                "STUR pediu código de autenticação em 2 fatores, mas STUR_TOTP_SECRET "
+                "não está configurado no .env."
+            )
+
+        import pyotp
+        codigo = pyotp.TOTP(self.config.stur_totp_secret).now()
+
+        page.locator(SELECTORS["login_2fa_codigo"]).fill(codigo)
+        self.esperar("código de autenticação preenchido")
+
+        page.locator(SELECTORS["login_botao"]).click()
+        self.esperar("2FA confirmado")
 
     def garantir_coluna_localizador_visivel(self) -> None:
         frame = self._frame()
@@ -190,9 +236,37 @@ class SturAutomation:
             )
             page.evaluate("Redirecionar('ListaVendas.aspx?ore')")
             self.esperar("tela de Vendas carregando (2ª tentativa)")
-            self.aguardar_campo_busca()
+            try:
+                self.aguardar_campo_busca()
+            except PlaywrightTimeoutError:
+                self._diagnosticar_falha_tela_vendas()
+                raise
 
         self.logger.info("Tela de Vendas pronta.")
+
+    def _diagnosticar_falha_tela_vendas(self) -> None:
+        """Loga o máximo de contexto possível quando a tela de Vendas não carrega,
+        já que até agora essa falha sempre aconteceu "às cegas" — sem screenshot nem
+        indicação do que realmente está na tela nesse momento."""
+        page = self._page()
+        try:
+            self.logger.error("[Diagnóstico] URL atual: %s", page.url)
+            self.logger.error("[Diagnóstico] Título da página: %s", page.title())
+        except Exception as exc:
+            self.logger.error("[Diagnóstico] Falha ao ler URL/título: %s", exc)
+
+        try:
+            caminho = self.salvar_screenshot_erro("tela_vendas_nao_carregou")
+            if caminho:
+                self.logger.error("[Diagnóstico] Screenshot salvo em: %s", caminho)
+        except Exception as exc:
+            self.logger.error("[Diagnóstico] Falha ao salvar screenshot: %s", exc)
+
+        try:
+            texto = page.inner_text("body")
+            self.logger.error("[Diagnóstico] Texto visível na página (primeiros 800 chars): %s", texto[:800])
+        except Exception as exc:
+            self.logger.error("[Diagnóstico] Falha ao ler texto da página: %s", exc)
 
     # ==========================================================
     # FLUXOS DE BUSCA - PASSO A PASSO
@@ -887,7 +961,7 @@ class SturAutomation:
     # ==========================================================
 
     def aguardar_campo_busca(self) -> None:
-        self._frame().locator(SELECTORS["campo_busca"]).first.wait_for(state="visible", timeout=30000)
+        self._frame().locator(SELECTORS["campo_busca"]).first.wait_for(state="visible", timeout=45000)
 
     def esperar(self, motivo: str = "") -> None:
         if motivo:
