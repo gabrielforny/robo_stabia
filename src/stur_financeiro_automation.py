@@ -502,7 +502,11 @@ class SturFinanceiroAutomation:
         grid = frame.locator(self.GRID)
         grid.wait_for(state="visible", timeout=15000)
 
-        grid_confirmada = self._aguardar_grid_localizador(localizador, timeout_segundos=15.0)
+        # 15s às vezes não é suficiente quando o STUR está lento (ex.: localizador
+        # YACOZZ em 10/08/2026 levou ~18.5s pra grid atualizar e foi reportado como
+        # "não encontrado" por engano). 30s dá mais margem sem custar muito nos casos
+        # em que o localizador realmente não existe (aí o timeout completo é gasto).
+        grid_confirmada = self._aguardar_grid_localizador(localizador, timeout_segundos=30.0)
         if not grid_confirmada:
             self.logger.warning(
                 "Grid de títulos não confirmou atualização para o localizador %s dentro "

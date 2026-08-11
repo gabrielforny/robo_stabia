@@ -163,7 +163,12 @@ def processar_latam_vendas(
                 if deve_parar and deve_parar():
                     raise ProcessamentoCancelado()
 
-                if tentativa > 1:
+                # stur pode ter ficado None se a tentativa anterior (de OUTRO item)
+                # esgotou as retentativas sem conseguir reabrir sessão — sem este check,
+                # a tentativa 1 do próximo item chamaria stur.buscar_latam_por_localizador
+                # em None, produzindo um erro confuso ("'NoneType' object has no
+                # attribute...") em vez de uma retentativa de verdade.
+                if tentativa > 1 or stur is None:
                     logger.warning(
                         "Tentativa %d/%d para localizador %s — fechando browser e reabrindo do zero...",
                         tentativa, MAX_TENTATIVAS_POR_ITEM, transacao.localizador_extraido,
@@ -353,7 +358,10 @@ def processar_hoteis_vendas(
                 if deve_parar and deve_parar():
                     raise ProcessamentoCancelado()
 
-                if tentativa > 1:
+                # Mesmo motivo do fluxo LATAM: se o item anterior esgotou as
+                # retentativas sem reabrir sessão, stur fica None e a tentativa 1
+                # deste item precisa reabrir antes de tentar usar stur.
+                if tentativa > 1 or stur is None:
                     logger.warning(
                         "Tentativa %d/%d para Hotel obs=%s — reabrindo browser...",
                         tentativa, MAX_TENTATIVAS_POR_ITEM, transacao.observacao,
@@ -546,6 +554,13 @@ def processar_latam_conferencia(
             financeiro.garantir_coluna_localizador_visivel()
 
             ok_conferencia: list[Transacao] = []
+            # Quando a mesma linha (localizador + valor) aparece duplicada na planilha
+            # da cliente, ambas apontam pro MESMO título no STUR — marcar o checkbox
+            # de novo não cria um segundo título lá, mas se somássemos de novo aqui o
+            # nosso total ficaria maior que o real gravado no STUR (foi o que aconteceu
+            # com JVLGSS: planilha tinha 2 linhas iguais, STUR só tem 1 título, e a
+            # soma que o robô reportava ficava R$ 6205,35 e 1 título maior que o real).
+            valores_ja_confirmados: dict[str, list[Decimal]] = defaultdict(list)
 
             for transacao in grupo:
                 if deve_parar and deve_parar():
@@ -556,6 +571,21 @@ def processar_latam_conferencia(
                     excel_service.acrescentar_resultado(
                         df, transacao, "ERRO Conferência | sem localizador"
                     )
+                    processados.add(transacao.indice_planilha)
+                    continue
+
+                valor_abs = abs(transacao.valor_excel) if transacao.valor_excel is not None else None
+                if valor_abs is not None and valor_abs in valores_ja_confirmados[transacao.localizador_extraido]:
+                    resultado_conf = (
+                        f"OK Conferência | {descricao_busca} | Loc {transacao.localizador_extraido} "
+                        "(duplicado na planilha — mesmo título já contabilizado por outra linha)"
+                    )
+                    if transacao.venda_ja_ok:
+                        excel_service.escrever_resultado(
+                            df, transacao, f"{transacao.resultado_venda_anterior} | {resultado_conf}"
+                        )
+                    else:
+                        excel_service.acrescentar_resultado(df, transacao, resultado_conf)
                     processados.add(transacao.indice_planilha)
                     continue
 
@@ -605,6 +635,8 @@ def processar_latam_conferencia(
 
                 if encontrado:
                     ok_conferencia.append(transacao)
+                    if valor_abs is not None:
+                        valores_ja_confirmados[transacao.localizador_extraido].append(valor_abs)
                     resultado_conf = f"OK Conferência | {descricao_busca} | Loc {transacao.localizador_extraido}"
                     if transacao.venda_ja_ok:
                         # Sobrescreve limpo: remove o ERRO Conferência anterior
