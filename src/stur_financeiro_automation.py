@@ -555,7 +555,30 @@ class SturFinanceiroAutomation:
                 alvo = abs(valor_excel)
 
                 if total_linhas > 1 and soma_tabela != alvo:
-                    subconjunto = self._encontrar_subconjunto_com_soma(valores_linhas, alvo)
+                    # Quando duas linhas do Excel repetem o mesmo localizador+valor
+                    # (ex.: JVLGSS em 20/08/2026, que tinha 2 títulos DISTINTOS na
+                    # grid com o mesmo valor), buscar o subconjunto sobre TODAS as
+                    # linhas sempre acha a mesma primeira que bate — marcando de
+                    # novo o título já processado e nunca tocando no segundo.
+                    # Por isso primeiro tenta achar o subconjunto só entre as linhas
+                    # AINDA NÃO marcadas nesta conferência; só cai para a busca sobre
+                    # todas as linhas se não sobrar nenhuma linha livre que bata
+                    # (aí sim é o caso de 1 único título real e a "duplicata" é só
+                    # da planilha da cliente, como em JVLGSS 10/08/2026).
+                    indices_nao_marcados = [
+                        i for i in range(total_linhas)
+                        if not linhas.nth(i).locator("[id*='ChkSelecionado']").first.is_checked()
+                    ]
+                    subconjunto = None
+                    if indices_nao_marcados:
+                        valores_nao_marcados = [valores_linhas[i] for i in indices_nao_marcados]
+                        sub_local = self._encontrar_subconjunto_com_soma(valores_nao_marcados, alvo)
+                        if sub_local is not None:
+                            subconjunto = [indices_nao_marcados[j] for j in sub_local]
+
+                    if subconjunto is None:
+                        subconjunto = self._encontrar_subconjunto_com_soma(valores_linhas, alvo)
+
                     if subconjunto is not None:
                         indices_para_marcar = subconjunto
                         soma_tabela = sum(abs(valores_linhas[i]) for i in subconjunto)
@@ -579,11 +602,18 @@ class SturFinanceiroAutomation:
                     "Valor conferido | localizador=%s | soma=%s = %s", localizador, soma_tabela, valor_excel
                 )
 
-        # Marca o checkbox só das linhas selecionadas (todas, ou o subconjunto que bateu)
+        # Marca o checkbox só das linhas selecionadas (todas, ou o subconjunto que bateu).
+        # Registra se alguma linha marcada JÁ estava com checkbox ligado ANTES desta
+        # chamada — isso indica que o título já tinha sido contabilizado por outra
+        # linha do Excel (mesmo localizador+valor) nesta mesma conferência, então o
+        # chamador não deve somar esse valor de novo no total reportado.
         marcados = 0
+        ja_estava_marcado = False
         for i in indices_para_marcar:
             chk = linhas.nth(i).locator("[id*='ChkSelecionado']")
             if chk.count() > 0:
+                if chk.first.is_checked():
+                    ja_estava_marcado = True
                 chk.first.check(force=True)
                 marcados += 1
             else:
@@ -598,6 +628,8 @@ class SturFinanceiroAutomation:
             "Localizador %s — %d/%d checkbox(es) marcado(s)", localizador, marcados, len(indices_para_marcar)
         )
         self.limpar_filtros_com_calma()
+        if ja_estava_marcado:
+            return True, "OK (duplicado — título já contabilizado por outra linha da planilha)"
         return True, "OK"
 
     @staticmethod

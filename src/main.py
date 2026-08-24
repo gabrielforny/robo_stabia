@@ -111,6 +111,14 @@ def processar_latam_vendas(
     total_sucesso = 0
     total_erro = 0
     stur: SturAutomation | None = None
+    # Quando o mesmo localizador aparece 2x na planilha com o mesmo valor (ex.:
+    # JVLGSS em 20/08/2026, que tinha 2 VENDAS distintas no STUR com o mesmo
+    # Total Fornecedor), a busca por Localizador retorna os 2 candidatos com
+    # valor igual e o "for c in candidatos: ... break" sempre pegava o primeiro
+    # — a 2ª linha da planilha reprocessava a MESMA venda de novo, e a 2ª venda
+    # real nunca era tocada. Rastreando qual codigo_venda já foi usado para cada
+    # localizador nesta execução, a 2ª linha prefere um candidato ainda não usado.
+    vendas_ja_usadas: dict[str, set] = defaultdict(set)
 
     def _fechar_sessao():
         nonlocal stur
@@ -206,19 +214,30 @@ def processar_latam_vendas(
                     )
                     break  # não é falha de browser — não retentar
 
-                candidato_ok = None
+                usadas_locator = vendas_ja_usadas[transacao.localizador_extraido]
+                candidatos_valor_ok = []
                 candidato_comissao = None
                 valor_comissao = None
                 for c in candidatos:
                     if transacao.valor_excel is not None and c.total_fornecedor is not None:
                         if abs(c.total_fornecedor) == abs(transacao.valor_excel):
-                            candidato_ok = c
-                            break
+                            candidatos_valor_ok.append(c)
+                            continue
                         # Verifica se a diferença é de até 20% (tabela > excel)
                         diferenca = abs(c.total_fornecedor) - abs(transacao.valor_excel)
                         if diferenca > 0 and diferenca / abs(c.total_fornecedor) <= Decimal("0.20"):
                             candidato_comissao = c
                             valor_comissao = diferenca
+
+                candidato_ok = None
+                if candidatos_valor_ok:
+                    # Prefere uma venda ainda não usada por outra linha da planilha
+                    # com o mesmo localizador; só reaproveita uma já usada se não
+                    # houver alternativa (aí é mesmo uma duplicata legítima).
+                    candidato_ok = next(
+                        (c for c in candidatos_valor_ok if c.codigo_venda not in usadas_locator),
+                        candidatos_valor_ok[0],
+                    )
 
                 if not candidato_ok and not candidato_comissao:
                     vals = [str(c.total_fornecedor) for c in candidatos]
@@ -254,6 +273,7 @@ def processar_latam_vendas(
                     )
                     foi_sucesso = True
                     ultima_exc = None
+                    usadas_locator.add(candidato_final.codigo_venda)
                     break
                 except VendaJaFaturadaError:
                     logger.warning("Venda %s já faturada — marcando e seguindo.", candidato_final.codigo_venda)
@@ -261,6 +281,7 @@ def processar_latam_vendas(
                         f"JÁ FATURADO | Venda {candidato_final.codigo_venda} | "
                         f"Loc {transacao.localizador_extraido}"
                     )
+                    usadas_locator.add(candidato_final.codigo_venda)
                     break  # condição esperada — não retentar
                 except Exception as exc:
                     logger.warning(
@@ -554,13 +575,6 @@ def processar_latam_conferencia(
             financeiro.garantir_coluna_localizador_visivel()
 
             ok_conferencia: list[Transacao] = []
-            # Quando a mesma linha (localizador + valor) aparece duplicada na planilha
-            # da cliente, ambas apontam pro MESMO título no STUR — marcar o checkbox
-            # de novo não cria um segundo título lá, mas se somássemos de novo aqui o
-            # nosso total ficaria maior que o real gravado no STUR (foi o que aconteceu
-            # com JVLGSS: planilha tinha 2 linhas iguais, STUR só tem 1 título, e a
-            # soma que o robô reportava ficava R$ 6205,35 e 1 título maior que o real).
-            valores_ja_confirmados: dict[str, list[Decimal]] = defaultdict(list)
 
             for transacao in grupo:
                 if deve_parar and deve_parar():
@@ -571,21 +585,6 @@ def processar_latam_conferencia(
                     excel_service.acrescentar_resultado(
                         df, transacao, "ERRO Conferência | sem localizador"
                     )
-                    processados.add(transacao.indice_planilha)
-                    continue
-
-                valor_abs = abs(transacao.valor_excel) if transacao.valor_excel is not None else None
-                if valor_abs is not None and valor_abs in valores_ja_confirmados[transacao.localizador_extraido]:
-                    resultado_conf = (
-                        f"OK Conferência | {descricao_busca} | Loc {transacao.localizador_extraido} "
-                        "(duplicado na planilha — mesmo título já contabilizado por outra linha)"
-                    )
-                    if transacao.venda_ja_ok:
-                        excel_service.escrever_resultado(
-                            df, transacao, f"{transacao.resultado_venda_anterior} | {resultado_conf}"
-                        )
-                    else:
-                        excel_service.acrescentar_resultado(df, transacao, resultado_conf)
                     processados.add(transacao.indice_planilha)
                     continue
 
@@ -634,10 +633,18 @@ def processar_latam_conferencia(
                 processados.add(transacao.indice_planilha)
 
                 if encontrado:
-                    ok_conferencia.append(transacao)
-                    if valor_abs is not None:
-                        valores_ja_confirmados[transacao.localizador_extraido].append(valor_abs)
+                    # "duplicado" aqui vem do próprio buscar_e_selecionar_localizador:
+                    # significa que o checkbox marcado já estava marcado ANTES desta
+                    # chamada, ou seja, é o mesmo título físico que outra linha do
+                    # Excel já contabilizou nesta conferência — não soma de novo no
+                    # total, senão o robô reporta um valor maior que o real gravado
+                    # no STUR (foi o que aconteceu com JVLGSS em 10/08/2026).
+                    duplicado = "duplicado" in motivo
+                    if not duplicado:
+                        ok_conferencia.append(transacao)
                     resultado_conf = f"OK Conferência | {descricao_busca} | Loc {transacao.localizador_extraido}"
+                    if duplicado:
+                        resultado_conf += " (duplicado — mesmo título já contabilizado por outra linha)"
                     if transacao.venda_ja_ok:
                         # Sobrescreve limpo: remove o ERRO Conferência anterior
                         excel_service.escrever_resultado(

@@ -1,4 +1,5 @@
 import re
+import time
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from logging import Logger
@@ -502,11 +503,26 @@ class SturAutomation:
         frame = self._frame()
         self.logger.info("Validando resultados da tabela. Origem=%s", origem_busca)
 
-        if frame.locator("text=Nenhum registro encontrado").count() > 0:
+        # A pausa fixa de ESPERA_SEGUNDOS (3s) antes daqui às vezes não é suficiente
+        # quando o STUR está lento pra atualizar a grid pós-AJAX (ex.: localizador
+        # YKVQGO em 12/08/2026 existia na tela de Vendas, mas foi reportado como
+        # "não encontrado" porque o robô checou a mensagem "Nenhum registro
+        # encontrado" antes da grid terminar de atualizar). Faz polling curto
+        # esperando ou a mensagem de vazio ou alguma linha de resultado aparecer,
+        # em vez de confiar cegamente no que já estava na tela após os 3s fixos.
+        mensagem_vazia = frame.locator("text=Nenhum registro encontrado")
+        linhas = frame.locator(SELECTORS["linhas_grid"])
+        intervalo = 0.4
+        tentativas = max(1, int(20.0 / intervalo))
+        for _ in range(tentativas):
+            if mensagem_vazia.count() > 0 or linhas.count() > 1:
+                break
+            time.sleep(intervalo)
+
+        if mensagem_vazia.count() > 0:
             self.logger.info("Mensagem 'Nenhum registro encontrado' detectada.")
             return []
 
-        linhas = frame.locator(SELECTORS["linhas_grid"])
         total_linhas = linhas.count()
         if total_linhas <= 1:
             self.logger.info("Tabela sem linhas de resultado.")
