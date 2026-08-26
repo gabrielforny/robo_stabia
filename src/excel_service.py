@@ -177,6 +177,22 @@ class ExcelService:
             else:
                 transacoes.append(t)
 
+        # Cartão corporativo às vezes tenta cobrar 2-3x o mesmo localizador com
+        # códigos de autorização diferentes (recusa/nova tentativa) e o extrato
+        # traz um "ESTORNO DE ..." revertendo as tentativas que não vingaram.
+        # Sem isso, o robô processava as 3 cobranças como se fossem reais — e
+        # como tinham o mesmo localizador+valor, a dedup de duplicata escolhia
+        # a PRIMEIRA que processasse (podendo ser justamente uma que foi
+        # estornada depois) como "a válida", em vez da que realmente sobrou
+        # sem estorno (ex.: QINAMF em 26/08/2026 — 614807 e 610165 foram
+        # estornados, só 616671 é a cobrança real, mas 614807 foi gravado no
+        # STUR por ter processado primeiro). Pareia cada estorno com sua
+        # cobrança original (mesmo Cód. Autorização + mesmo valor em módulo) e
+        # remove os dois do processamento antes de tudo o mais.
+        estornadas = self._parear_estornos(df, transacoes, transacoes_negativas)
+        if estornadas:
+            transacoes = [t for t in transacoes if t.indice_planilha not in estornadas]
+
         _aereas = {"LATAM", "GOL", "AZUL", "VCN"}
         aereas = [t for t in transacoes if t.tipo_busca in _aereas]
         ignoradas = [t for t in transacoes if t.tipo_busca not in _aereas]
@@ -209,6 +225,67 @@ class ExcelService:
                 "\n".join(linhas_negativas),
             )
         return transacoes, transacoes_negativas
+
+    def _parear_estornos(
+        self,
+        df: pd.DataFrame,
+        positivas: list[Transacao],
+        negativas: list[Transacao],
+    ) -> set[int]:
+        """Pareia cada estorno com a cobrança original que ele reverte.
+
+        Casa por: mesmo valor em módulo, mesmo Cód. Autorização (quando os dois
+        lados têm) e descrição da negativa = "ESTORNO DE " + descrição da
+        positiva. Escreve o resultado direto na planilha pros dois lados e
+        devolve o conjunto de índices das linhas positivas que foram
+        estornadas (pra excluir do processamento).
+        """
+        prefixo = "ESTORNO DE "
+        usadas_negativas: set[int] = set()
+        estornadas: set[int] = set()
+
+        for pos in positivas:
+            if pos.valor_excel is None:
+                continue
+            desc_pos = pos.estabelecimento.upper().strip()
+
+            for neg in negativas:
+                if neg.indice_planilha in usadas_negativas or neg.valor_excel is None:
+                    continue
+                desc_neg = neg.estabelecimento.upper().strip()
+                if not desc_neg.startswith(prefixo):
+                    continue
+                if desc_neg[len(prefixo):].strip() != desc_pos:
+                    continue
+                if abs(neg.valor_excel) != abs(pos.valor_excel):
+                    continue
+                if pos.codigo_autorizacao and neg.codigo_autorizacao and pos.codigo_autorizacao != neg.codigo_autorizacao:
+                    continue
+
+                usadas_negativas.add(neg.indice_planilha)
+                estornadas.add(pos.indice_planilha)
+                self.escrever_resultado(
+                    df, pos,
+                    f"ESTORNADO — não processado (revertido pelo estorno da linha {neg.linha_excel}, "
+                    f"mesmo Cód. Autorização e valor)",
+                )
+                self.escrever_resultado(
+                    df, neg,
+                    f"ESTORNO — reverte a cobrança da linha {pos.linha_excel}, não processado",
+                )
+                break
+
+        if estornadas:
+            _log.info(
+                "Estornos pareados e excluídos do processamento (%d):\n%s",
+                len(estornadas),
+                "\n".join(
+                    f"  Linha {t.linha_excel:>3} | {t.valor_excel} | Cód.Aut={t.codigo_autorizacao} | {t.estabelecimento}"
+                    for t in positivas if t.indice_planilha in estornadas
+                ),
+            )
+
+        return estornadas
 
     def escrever_resultado(self, df: pd.DataFrame, transacao: Transacao, resultado: str) -> None:
         coluna = self.config.coluna_resultado
@@ -343,7 +420,10 @@ class ExcelService:
                 resultado_existente = str(row.get(coluna_res, "") or "").strip()
                 if resultado_existente and resultado_existente.lower() not in ("", "nan"):
                     r = resultado_existente.upper()
-                    if r.startswith("OK") or "FATURADO" in r:
+                    # ESTORNADO/ESTORNO vem do pareamento feito em montar_transacoes
+                    # (roda antes desta função, mesmo df) — cobrança revertida por
+                    # estorno não deve ser processada aqui também.
+                    if r.startswith("OK") or "FATURADO" in r or r.startswith("ESTORNADO") or r.startswith("ESTORNO"):
                         continue
 
             estabelecimento = str(row.get(coluna_estabelecimento, "") or "").strip()

@@ -809,10 +809,15 @@ def processar_arquivo_aberto(
     df, aba = excel_service.carregar_transacoes(arquivo)
     logger.info("Aba/tipo carregado: %s | Colunas: %s", aba, list(df.columns))
 
+    # montar_transacoes também pareia estorno x cobrança original e grava o
+    # resultado direto no df (efeito colateral necessário mesmo no modo
+    # "só hotéis" — do contrário uma cobrança de hotel estornada no cartão
+    # não seria detectada, já que montar_transacoes_hoteis não faz esse
+    # pareamento sozinha). Por isso sempre chamamos, e só descartamos a
+    # lista de transações aéreas quando o modo pede só hotéis.
+    transacoes, transacoes_negativas = excel_service.montar_transacoes(df, origem_arquivo=arquivo.name)
     if somente_tipo == "hoteis":
         transacoes, transacoes_negativas = [], []
-    else:
-        transacoes, transacoes_negativas = excel_service.montar_transacoes(df, origem_arquivo=arquivo.name)
 
     if somente_tipo == "latam":
         transacoes_hotel = []
