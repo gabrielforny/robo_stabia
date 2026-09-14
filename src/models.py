@@ -51,6 +51,8 @@ class TransacaoHotel:
     cliente: str             # col W — filtro por empresa no STUR
     data_fatura: str         # data de hoje no formato dd/mm/aaaa
     origem_arquivo: str = ""
+    eh_empresa_extra: bool = False  # Centro de custo Ferroport/Exal (únicas com cobrança extra) — vem do financial-report
+    eh_extra_orfao: bool = False    # esta linha é só a transação extra separada (2ª cobrança), não a diária em si
 
 
 @dataclass(slots=True)

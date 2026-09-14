@@ -1,5 +1,6 @@
 import logging
 import re
+from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -360,7 +361,12 @@ class ExcelService:
         return saida
 
 
-    def montar_transacoes_hoteis(self, df: pd.DataFrame, origem_arquivo: str | None = None) -> list[TransacaoHotel]:
+    def montar_transacoes_hoteis(
+        self,
+        df: pd.DataFrame,
+        origem_arquivo: str | None = None,
+        financial_report: "pd.DataFrame | None" = None,
+    ) -> list[TransacaoHotel]:
         """Retorna transações de Hotelaria.
 
         Duas formas de identificar uma linha como hotel:
@@ -370,6 +376,15 @@ class ExcelService:
           coluna de OBSERVAÇÃO) preenchido pra buscar a venda no STUR — se a linha for
           identificada como hotel mas essa coluna estiver vazia, ela é contada em
           `_ultimo_total_hotel_sem_integracao` e pulada (logada como aviso, não erro).
+
+        `financial_report`: planilha "financial-report" opcional, usada apenas para
+        Ferroport/Exal — únicas empresas onde pode haver cobrança extra no cartão além
+        da diária (dentro da mesma transação ou como uma 2ª transação separada). Para
+        essas linhas o Cód. Integração é resolvido cruzando Estabelecimento+Data com o
+        financial-report em vez de depender de preenchimento manual — a própria Clara
+        embute um localizador para essas linhas, mas ele pode apontar pra venda errada
+        quando é um extra (confirmado com dado real: uma cobrança extra de R$48 veio
+        com o localizador de OUTRA hospedagem do mesmo hotel), então não confiamos nele.
         """
         from datetime import datetime
 
@@ -390,7 +405,14 @@ class ExcelService:
         coluna_cliente = self._resolver_coluna_cliente(df)
         coluna_res = self.config.coluna_resultado
 
+        indice_ferroport_exal = (
+            self._indexar_financial_report_hoteis(financial_report)
+            if financial_report is not None
+            else {}
+        )
+
         transacoes: list[TransacaoHotel] = []
+        pendentes_ferroport_exal: dict[tuple[str, str], list[dict]] = defaultdict(list)
         sem_integracao = 0
 
         for index, row in df.iterrows():
@@ -404,16 +426,6 @@ class ExcelService:
                 eh_hotel_por_alias = "hotel" in alias
 
             if not observacao and not eh_hotel_por_alias:
-                continue
-
-            if not observacao and eh_hotel_por_alias:
-                sem_integracao += 1
-                _log.warning(
-                    "Linha %d identificada como hotel (Alias='%s') mas sem Cód. Integração "
-                    "preenchido — pulando. Preencha a coluna de observação/cód. integração "
-                    "dessa linha para o robô conseguir buscar no STUR.",
-                    index + 2, row.get(coluna_alias, ""),
-                )
                 continue
 
             if coluna_res in df.columns:
@@ -442,21 +454,86 @@ class ExcelService:
             if cliente.lower() == "nan":
                 cliente = ""
 
-            transacoes.append(
-                TransacaoHotel(
-                    indice_planilha=index,
-                    linha_excel=index + 2,
-                    estabelecimento=estabelecimento,
-                    data_aprovacao=data_excel,
-                    valor_excel=valor_excel,
-                    codigo_autorizacao=codigo_autorizacao,
-                    titular=titular,
-                    observacao=observacao,
-                    cliente=cliente,
-                    data_fatura=data_fatura_hoje,
-                    origem_arquivo=origem_arquivo or "",
-                )
+            base = dict(
+                indice_planilha=index,
+                linha_excel=index + 2,
+                estabelecimento=estabelecimento,
+                data_aprovacao=data_excel,
+                valor_excel=valor_excel,
+                codigo_autorizacao=codigo_autorizacao,
+                titular=titular,
+                cliente=cliente,
+                data_fatura=data_fatura_hoje,
+                origem_arquivo=origem_arquivo or "",
             )
+
+            if observacao:
+                transacoes.append(TransacaoHotel(observacao=observacao, **base))
+                continue
+
+            # Sem Cód. Integração manual — tenta achar via financial-report
+            # (Ferroport/Exal). Data convertida pro mesmo formato usado no join.
+            chave = (
+                self._normalizar_estabelecimento_hotel(estabelecimento),
+                converter_data_excel_para_stur(data_excel),
+            )
+            if indice_ferroport_exal.get(chave):
+                pendentes_ferroport_exal[chave].append(base)
+                continue
+
+            sem_integracao += 1
+            _log.warning(
+                "Linha %d identificada como hotel (Alias='%s') mas sem Cód. Integração "
+                "preenchido e sem correspondência no financial-report — pulando. "
+                "Preencha a coluna de observação/cód. integração dessa linha para o "
+                "robô conseguir buscar no STUR.",
+                index + 2, row.get(coluna_alias, "") if coluna_alias else "",
+            )
+
+        # Classifica cada grupo Ferroport/Exal: a linha cujo valor bate com o
+        # "Valor faturado" oficial do financial-report é a diária normal; qualquer
+        # outra linha do mesmo grupo é uma cobrança extra separada (2ª transação).
+        # Quando não dá pra comparar (financial-report sem Valor faturado), assume a
+        # de maior valor como a diária — heurística conservadora só usada como último
+        # recurso, o caso normal (Valor faturado presente) cobre os dados reais vistos.
+        for chave, linhas in pendentes_ferroport_exal.items():
+            registro = indice_ferroport_exal[chave]
+            localizador = registro["localizador"]
+            centro_custo = registro["centro_custo"]
+            valor_oficial = registro.get("valor_faturado")
+
+            if valor_oficial is not None:
+                indice_base = next(
+                    (
+                        i for i, linha in enumerate(linhas)
+                        if linha["valor_excel"] is not None
+                        and abs(abs(linha["valor_excel"]) - abs(valor_oficial)) <= Decimal("0.01")
+                    ),
+                    None,
+                )
+            else:
+                indice_base = max(
+                    range(len(linhas)),
+                    key=lambda i: abs(linhas[i]["valor_excel"] or Decimal("0")),
+                )
+
+            for i, linha in enumerate(linhas):
+                eh_extra_orfao = indice_base is not None and i != indice_base
+                if indice_base is None and len(linhas) > 1:
+                    # Nenhuma linha bate com o valor oficial e há mais de uma
+                    # candidata — não dá pra saber qual é a diária com segurança;
+                    # todas seguem como extra órfão pra ficar visível na planilha
+                    # de saída em vez de arriscar lançar na venda errada.
+                    eh_extra_orfao = True
+                cliente_final = linha["cliente"] or centro_custo
+                transacoes.append(
+                    TransacaoHotel(
+                        observacao=localizador,
+                        eh_empresa_extra=True,
+                        eh_extra_orfao=eh_extra_orfao,
+                        **{**linha, "cliente": cliente_final},
+                    )
+                )
 
         if sem_integracao:
             _log.warning(
@@ -465,6 +542,64 @@ class ExcelService:
             )
 
         return transacoes
+
+    def _normalizar_estabelecimento_hotel(self, texto: str) -> str:
+        """Normaliza nome de hotel pra cruzar Clara x financial-report.
+
+        Remove prefixo numérico de filial que a Clara às vezes adiciona
+        (ex.: "0195 IBIS OSASCO" -> "ibis osasco").
+        """
+        normalizado = self._normalizar_texto(texto)
+        normalizado = re.sub(r"^\d+\s+", "", normalizado)
+        return re.sub(r"\s+", " ", normalizado).strip()
+
+    def _indexar_financial_report_hoteis(self, df: "pd.DataFrame") -> dict[tuple[str, str], dict]:
+        """Indexa o financial-report por (estabelecimento normalizado, data de transação),
+        restrito a Centro de custo Ferroport/Exal — únicas empresas com cobrança extra
+        (regra confirmada com o cliente). Usado para achar o Localizador correto de
+        linhas de hotel sem Cód. Integração preenchido manualmente."""
+        colunas_norm = {self._normalizar_texto(col): col for col in df.columns}
+        col_localizador = colunas_norm.get("localizador")
+        col_estabelecimento = colunas_norm.get("estabelecimento")
+        col_data = colunas_norm.get("data de transacao")
+        col_centro_custo = colunas_norm.get("centro de custo")
+        col_valor = colunas_norm.get("valor faturado")
+
+        if not (col_localizador and col_estabelecimento and col_data and col_centro_custo):
+            _log.warning(
+                "financial-report sem as colunas esperadas (Localizador/Estabelecimento/"
+                "Data de transação/Centro de custo) — ignorando. Colunas encontradas: %s",
+                list(df.columns),
+            )
+            return {}
+
+        indice: dict[tuple[str, str], dict] = {}
+        for _, row in df.iterrows():
+            centro_custo = str(row.get(col_centro_custo, "") or "").strip().upper()
+            if centro_custo not in {"FERROPORT", "EXAL"}:
+                continue
+
+            localizador = str(row.get(col_localizador, "") or "").strip()
+            if not localizador or localizador.lower() in ("nan", "#n/d"):
+                continue
+
+            chave = (
+                self._normalizar_estabelecimento_hotel(str(row.get(col_estabelecimento, ""))),
+                converter_data_excel_para_stur(str(row.get(col_data, "") or "")),
+            )
+            indice[chave] = {
+                "localizador": localizador,
+                "centro_custo": centro_custo,
+                "valor_faturado": self._parse_decimal(row.get(col_valor)) if col_valor else None,
+            }
+
+        return indice
+
+    def eh_financial_report(self, df: "pd.DataFrame") -> bool:
+        """Identifica se o arquivo carregado é o financial-report (não é uma planilha
+        de transações normal — traz Autorização/Localizador/Centro de custo)."""
+        colunas_normalizadas = {self._normalizar_texto(col) for col in df.columns}
+        return {"autorizacao", "localizador", "centro de custo"}.issubset(colunas_normalizadas)
 
     def escrever_discrepancia_hotel(
         self,
@@ -614,7 +749,13 @@ class ExcelService:
         """
         colunas_normalizadas = {self._normalizar_texto(col) for col in df.columns}
 
-        if "transacao" in colunas_normalizadas and (
+        # "comercio"/"apelido do cartao" é o nome novo que a Clara passou a usar em
+        # alguns exports pra "transacao"/"alias do cartao" — mantém os dois
+        # reconhecidos, sem remover o antigo.
+        tem_coluna_estabelecimento_clara = (
+            "transacao" in colunas_normalizadas or "comercio" in colunas_normalizadas
+        )
+        if tem_coluna_estabelecimento_clara and (
             "valor original" in colunas_normalizadas or "valor em r$" in colunas_normalizadas
         ):
             return "CLARA"
@@ -727,7 +868,7 @@ class ExcelService:
 
     def _resolver_coluna_estabelecimento(self, df: pd.DataFrame, tipo_layout: str = "PADRAO") -> str:
         if tipo_layout == "CLARA":
-            candidatos = ["transação", "transacao"]
+            candidatos = ["transação", "transacao", "comércio", "comercio"]
         else:
             candidatos = ["estabelecimento", "fornecedor", "descricao", "descrição", "historico", "histórico", "transação", "transacao"]
 
@@ -850,7 +991,11 @@ class ExcelService:
         return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="cliente/empresa")
 
     def _resolver_coluna_alias_cartao(self, df: pd.DataFrame) -> str | None:
-        candidatos = ["alias do cartao", "alias do cartão", "cartao", "cartão"]
+        candidatos = [
+            "alias do cartao", "alias do cartão",
+            "apelido do cartao", "apelido do cartão",
+            "cartao", "cartão",
+        ]
         return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="alias do cartão")
 
     def _normalizar_texto(self, texto: str) -> str:

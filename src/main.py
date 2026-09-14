@@ -419,6 +419,39 @@ def processar_hoteis_vendas(
                     )
                     break  # não é falha de browser — não retentar
 
+                # Cobrança extra Ferroport/Exal feita como 2ª transação separada no
+                # cartão (não a diária em si) — vai direto pro sub-fluxo Extra
+                # Hotelaria, sem passar pelos Estados 1/2/3: o valor desta linha é o
+                # extra inteiro, não algo a comparar contra o CCRAG já lançado na
+                # venda base (que pertence à diária, lançada por outra linha do Excel).
+                if transacao.eh_extra_orfao:
+                    try:
+                        if transacao.valor_excel is None:
+                            resultado_msg = (
+                                f"ERRO | Hotel extra (Ferroport/Exal) sem valor | "
+                                f"Cód.Int. {transacao.observacao}"
+                            )
+                        else:
+                            stur.executar_copiar_venda_extra(
+                                candidato, transacao.valor_excel, transacao.observacao,
+                                transacao.codigo_autorizacao,
+                            )
+                            resultado_msg = (
+                                f"OK Hotel Extra (Ferroport/Exal, transação separada) | "
+                                f"Venda base {candidato.codigo_venda} | "
+                                f"Cód.Int. {transacao.observacao} | Valor extra {transacao.valor_excel}"
+                            )
+                        foi_sucesso = resultado_msg.startswith("OK")
+                        ultima_exc = None
+                        break
+                    except Exception as exc:
+                        logger.warning(
+                            "Erro ao processar Hotel extra órfão obs=%s (tentativa %d/%d): %s",
+                            transacao.observacao, tentativa, MAX_TENTATIVAS_POR_ITEM, exc,
+                        )
+                        ultima_exc = exc
+                        continue
+
                 try:
                     stur.abrir_edicao_venda(candidato)
                     estado = stur.ler_estado_formas_rec_pag()
@@ -482,11 +515,58 @@ def processar_hoteis_vendas(
                     stur.adicionar_pagamento_ccrag(
                         codigo_autorizacao=transacao.codigo_autorizacao
                     )
+
+                    # Ferroport/Exal: o CCRAG que acabou de ser lançado reflete o
+                    # valor da diária já cadastrado no STUR, não necessariamente o
+                    # valor do Excel — quando a cobrança extra veio embutida na MESMA
+                    # transação do cartão (Excel = diária + extra), a venda ainda não
+                    # tinha nenhum CCRAG antes pra comparar (por isso caiu aqui, no
+                    # Estado 3, e não no Estado 2). Relê o valor recém-lançado e, se
+                    # divergir do Excel, separa a diferença pro sub-fluxo Extra
+                    # Hotelaria em vez de deixar o extra silenciosamente de fora.
+                    extra_pendente = None
+                    valor_ccrag_novo = None
+                    if transacao.eh_empresa_extra and transacao.valor_excel is not None:
+                        valor_ccrag_novo = stur.ler_estado_formas_rec_pag().get("valor_ccrag")
+                        if (
+                            valor_ccrag_novo is not None
+                            and abs(valor_ccrag_novo) != abs(transacao.valor_excel)
+                        ):
+                            extra_pendente = abs(transacao.valor_excel) - abs(valor_ccrag_novo)
+                            logger.warning(
+                                "Hotel Ferroport/Exal | venda nova já sai com valor divergente "
+                                "do Excel (extra embutido na mesma transação) | obs=%s | "
+                                "excel=%s | stur=%s | extra=%s",
+                                transacao.observacao, transacao.valor_excel,
+                                valor_ccrag_novo, extra_pendente,
+                            )
+                            excel_service.escrever_discrepancia_hotel(
+                                df, transacao, valor_ccrag_novo, extra_pendente
+                            )
+
                     stur.gravar_venda_hotel()
-                    resultado_msg = (
-                        f"OK Hotel Vendas | Venda {candidato.codigo_venda} | "
-                        f"Cód.Int. {transacao.observacao}"
-                    )
+
+                    if extra_pendente is not None:
+                        try:
+                            stur.executar_copiar_venda_extra(
+                                candidato, extra_pendente, transacao.observacao,
+                                transacao.codigo_autorizacao,
+                            )
+                        except Exception as exc_extra:
+                            logger.warning(
+                                "Sub-fluxo Extra Hotelaria (venda nova) falhou para obs=%s: %s",
+                                transacao.observacao, exc_extra,
+                            )
+                        resultado_msg = (
+                            f"DISCREPÂNCIA (venda nova) | Venda {candidato.codigo_venda} | "
+                            f"Excel={transacao.valor_excel} | STUR={valor_ccrag_novo} | "
+                            f"Extra={extra_pendente}"
+                        )
+                    else:
+                        resultado_msg = (
+                            f"OK Hotel Vendas | Venda {candidato.codigo_venda} | "
+                            f"Cód.Int. {transacao.observacao}"
+                        )
                     foi_sucesso = True
                     ultima_exc = None
                     break
@@ -799,10 +879,14 @@ def processar_arquivo_aberto(
     deve_parar=None,
     somente_conferencia: bool = False,
     somente_tipo: str | None = None,
+    financial_report=None,
 ) -> ResultadoProcessamento:
     """`somente_tipo`: quando "latam" ou "hoteis", restringe este arquivo a um único
     fluxo — usado quando o usuário escolheu planilhas diferentes para aéreo e
     hotelaria na GUI. `None` mantém o padrão de ler os dois fluxos do mesmo arquivo.
+
+    `financial_report`: DataFrame do arquivo "financial-report", quando presente entre
+    os arquivos recebidos nesta execução — usado só na Fase 1 Hotel, para Ferroport/Exal.
     """
     logger.info("Iniciando processamento do arquivo: %s", arquivo)
 
@@ -822,7 +906,9 @@ def processar_arquivo_aberto(
     if somente_tipo == "latam":
         transacoes_hotel = []
     else:
-        transacoes_hotel = excel_service.montar_transacoes_hoteis(df, origem_arquivo=arquivo.name)
+        transacoes_hotel = excel_service.montar_transacoes_hoteis(
+            df, origem_arquivo=arquivo.name, financial_report=financial_report,
+        )
 
     logger.info("Total de linhas LATAM/GOL/AZUL: %d | Valores negativos (reservados): %d", len(transacoes), len(transacoes_negativas))
     logger.info("Total de linhas Hotelaria: %d", len(transacoes_hotel))
@@ -984,6 +1070,35 @@ def processar_arquivos(
     if not arquivos:
         raise FileNotFoundError("Nenhum arquivo Excel/CSV válido encontrado para processamento.")
 
+    # Separa o "financial-report" (se algum dos arquivos recebidos for ele) do resto —
+    # ele não é uma planilha de transações a processar, é só apoio pra Fase 1 Hotel
+    # achar o Cód. Integração correto de linhas Ferroport/Exal. Detecção automática
+    # pelas colunas, igual já é feito pro layout CLARA x PADRÃO.
+    financial_report_df = None
+    arquivos_transacoes = []
+    for arquivo in arquivos:
+        eh_financial = False
+        if arquivo.suffix.lower() in {".xlsx", ".xls"}:
+            try:
+                df_peek, _ = excel_service.carregar_transacoes(arquivo)
+                eh_financial = excel_service.eh_financial_report(df_peek)
+            except Exception as exc:
+                logger.warning("Não consegui inspecionar %s para checar se é financial-report: %s", arquivo, exc)
+
+        if eh_financial:
+            if financial_report_df is not None:
+                logger.warning(
+                    "Mais de um financial-report encontrado — usando o mais recente: %s", arquivo
+                )
+            financial_report_df = df_peek
+            logger.info("financial-report identificado: %s (%d linhas)", arquivo, len(df_peek))
+        else:
+            arquivos_transacoes.append(arquivo)
+
+    arquivos = arquivos_transacoes
+    if not arquivos:
+        raise FileNotFoundError("Nenhum arquivo de transações válido encontrado (só o financial-report foi informado).")
+
     if somente_conferencia:
         logger.info("Iniciando processamento — fluxo LATAM: SOMENTE Conferências (Fase 1 pulada)")
     else:
@@ -1009,6 +1124,7 @@ def processar_arquivos(
                 deve_parar=deve_parar,
                 somente_conferencia=somente_conferencia,
                 somente_tipo=forcar_tipo or (tipos_por_arquivo or {}).get(arquivo),
+                financial_report=financial_report_df,
             )
         except ProcessamentoCancelado as exc:
             exc.resultados_parciais = resultados
