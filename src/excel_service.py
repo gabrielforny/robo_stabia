@@ -896,7 +896,10 @@ class ExcelService:
         return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="VCN")
 
     def _resolver_coluna_extrato(self, df: pd.DataFrame) -> str | None:
-        candidatos = ["extrato da conta", "extrato", "periodo", "período", "period", "fatura"]
+        candidatos = [
+            "extrato da conta", "extrato", "periodo", "período", "period", "fatura",
+            "periodo de faturamento", "período de faturamento",
+        ]
         return self._procurar_coluna(df, candidatos, obrigatoria=False, finalidade="extrato da conta")
 
     def _resolver_coluna_autorizacao(self, df: pd.DataFrame) -> str | None:
